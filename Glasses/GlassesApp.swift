@@ -11,7 +11,7 @@ import SwiftUI
 struct GlassesApp: App {
     var body: some Scene {
         WindowGroup {
-            OptometryFormView()
+            ContentView()
         }
     }
 }
