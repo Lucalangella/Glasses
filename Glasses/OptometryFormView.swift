@@ -58,13 +58,38 @@ struct OptometryFormView: View {
                             .font(.title3)
                             .padding(.trailing, 8)
                         
-                        HStack(spacing: 40) {
+                        // Modified HStack to include PD in the middle
+                        HStack(spacing: 16) {
                             VStack {
                                 ProtractorView(axisValue: odActiveAxis, isOS: false)
                                     .frame(height: 160)
                                 Text("OD")
                                     .font(.title)
                             }
+                            
+                            // NEW: Bridging PD Section
+                            VStack(spacing: 6) {
+                                Text("PD")
+                                    .font(.headline)
+                                    .foregroundColor(.secondary)
+                                
+                                HStack(spacing: 2) {
+                                    TextField("63", text: $pdValue)
+                                        .keyboardType(.decimalPad)
+                                        .multilineTextAlignment(.center)
+                                        .frame(width: 44)
+                                    
+                                    Text("mm")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 10)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
+                                .cornerRadius(12)
+                            }
+                            // Pushes the PD box down slightly so it aligns well with the flat bottom of the semicircles
+                            .padding(.top, 50)
                             
                             VStack {
                                 ProtractorView(axisValue: osActiveAxis, isOS: true)
@@ -78,14 +103,14 @@ struct OptometryFormView: View {
                     
                     PrescriptionTableView(
                         odSphere: $odSphere, odCyl: $odCyl, odAxis: $odAxis,
-                        osSphere: $osSphere, osCyl: $osCyl, osAxis: $osAxis,
-                        pdValue: $pdValue
+                        osSphere: $osSphere, osCyl: $osCyl, osAxis: $osAxis
+                        // pdValue removed from here
                     )
                 }
                 .padding(.vertical)
             }
             .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("New Prescription")
+            .navigationTitle("Clarity")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: String.self) { frameName in
                 Glasses3DView(frameName: frameName)
@@ -308,7 +333,7 @@ struct FramesGridView: View {
     var recommendedFrames: Set<String>
     
     let frames = [
-        "aviator", "browline", "cat_eye",
+        "aviator", "browline", "cateye",
         "geometric", "oval", "oversized",
         "rectangle", "round", "square"
     ]
@@ -529,13 +554,10 @@ struct PrescriptionTableView: View {
     @Binding var osCyl: String
     @Binding var osAxis: String
     
-    @Binding var pdValue: String
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             eyeSection(title: "Right Eye (OD)", sph: $odSphere, cyl: $odCyl, axis: $odAxis)
             eyeSection(title: "Left Eye (OS)", sph: $osSphere, cyl: $osCyl, axis: $osAxis)
-            pdSection()
         }
         .padding(.horizontal)
     }
@@ -551,29 +573,6 @@ struct PrescriptionTableView: View {
                 inputColumn(title: "CYL", placeholder: "0.00", text: cyl, hasSignToggle: true)
                 verticalDivider()
                 inputColumn(title: "AXIS", placeholder: "0", text: axis, isAxis: true)
-            }
-            .padding(.vertical, 16)
-            .padding(.horizontal, 16)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .cornerRadius(16)
-        }
-    }
-    
-    private func pdSection() -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Pupillary Distance")
-                .font(.headline)
-            
-            HStack {
-                Text("PD")
-                    .fontWeight(.bold)
-                Spacer()
-                TextField("63.0", text: $pdValue)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 100)
-                Text("mm")
-                    .fontWeight(.medium)
             }
             .padding(.vertical, 16)
             .padding(.horizontal, 16)
