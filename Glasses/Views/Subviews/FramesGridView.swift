@@ -3,32 +3,53 @@ import SwiftUI
 struct FramesGridView: View {
     var recommendedFrames: Set<String>
     
-    let frames = [
+    private let allFrames = [
         "aviator", "browline", "cateye",
         "geometric", "oval", "oversized",
         "rectangle", "round", "square"
     ]
     
-    let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    private var displayedFrames: [String] {
+        if recommendedFrames.isEmpty {
+            return allFrames
+        } else {
+            return allFrames.filter { recommendedFrames.contains($0) }
+        }
+    }
+    
+    // MARK: - Dynamic Columns
+    // Takes up to 3 columns, but scales down to 1 or 2 to fill the width if fewer frames are shown
+    private var columns: [GridItem] {
+        let activeCount = max(1, min(displayedFrames.count, 3))
+        return Array(repeating: GridItem(.flexible(), spacing: 16), count: activeCount)
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            
+            // MARK: - Header
             HStack {
-                Text("Frame Styles")
+                Text(recommendedFrames.isEmpty ? "All Frame Styles" : "Recommended Styles")
                     .font(.headline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(recommendedFrames.isEmpty ? .secondary : .accentColor)
+                
                 Spacer()
+                
                 if !recommendedFrames.isEmpty {
-                    Text("Recommendations based on Rx")
-                        .font(.caption)
-                        .foregroundColor(.accentColor)
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                        Text("Filtered by Rx")
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(.accentColor)
                 }
             }
             .padding(.horizontal)
             
+            // MARK: - Grid
             LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(frames, id: \.self) { frameName in
-                    let isRecommended = recommendedFrames.contains(frameName)
+                ForEach(displayedFrames, id: \.self) { frameName in
+                    let isRecommended = !recommendedFrames.isEmpty
                     
                     NavigationLink(value: frameName) {
                         VStack(spacing: 8) {
@@ -36,18 +57,19 @@ struct FramesGridView: View {
                                 Image(frameName)
                                     .resizable()
                                     .scaledToFit()
-                                    .frame(height: 40)
+                                    // Flex height so they look good when taking up 50% or 100% of the screen width
+                                    .frame(minHeight: 40, maxHeight: 60)
                                     .padding()
                                     .frame(maxWidth: .infinity)
                                     .background(Color(UIColor.secondarySystemGroupedBackground))
                                     .cornerRadius(12)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(isRecommended ? Color.accentColor : Color.clear, lineWidth: 2)
+                                            .stroke(isRecommended ? Color.accentColor.opacity(0.5) : Color.clear, lineWidth: 2)
                                     )
                                 
                                 if isRecommended {
-                                    Image(systemName: "sparkles")
+                                    Image(systemName: "checkmark.circle.fill")
                                         .font(.caption)
                                         .foregroundColor(.white)
                                         .padding(4)
@@ -60,17 +82,15 @@ struct FramesGridView: View {
                             Text(frameName.capitalized.replacingOccurrences(of: "_", with: " "))
                                 .font(.caption2)
                                 .fontWeight(isRecommended ? .bold : .medium)
-                                .foregroundColor(isRecommended ? .primary : .secondary)
+                                .foregroundColor(.primary)
                         }
-                        .opacity(!recommendedFrames.isEmpty && !isRecommended ? 0.6 : 1.0)
-                        .animation(.easeInOut, value: recommendedFrames)
                     }
                     .buttonStyle(.plain)
+                    .transition(.scale(scale: 0.8).combined(with: .opacity))
                 }
             }
             .padding(.horizontal)
+            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: displayedFrames)
         }
     }
 }
-
-
