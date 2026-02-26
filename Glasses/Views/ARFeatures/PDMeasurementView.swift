@@ -130,61 +130,47 @@ struct ARFaceMeasurementView: UIViewRepresentable {
     }
     
     class Coordinator: NSObject, ARSessionDelegate {
-            var parent: ARFaceMeasurementView
-            var measurements: [Float] = []
-            let requiredFrames: Int = 45 // Slightly more frames for a better median sample (~0.75 seconds)
-            var isDone = false
+        var parent: ARFaceMeasurementView
+        
+        // Note: Switched to Double to match the PDCalculator output
+        var measurements: [Double] = []
+        let requiredFrames: Int = 45 // Takes ~0.75 seconds to collect
+        var isDone = false
+        
+        init(_ parent: ARFaceMeasurementView) {
+            self.parent = parent
+        }
+        
+        func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
+            // Find the first face anchor, exit if we are already done
+            guard !isDone, let faceAnchor = anchors.compactMap({ $0 as? ARFaceAnchor }).first else { return }
             
-            // Average human eyeball radius in meters
-            let eyeballRadius: Float = 0.012
+            // 1. Calculate the distance using our extracted utility
+            let distanceInMm = PDCalculator.calculateDistance(from: faceAnchor)
             
-            init(_ parent: ARFaceMeasurementView) {
-                self.parent = parent
-            }
-            
-            func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
-                guard !isDone, let faceAnchor = anchors.compactMap({ $0 as? ARFaceAnchor }).first else { return }
+            // 2. Filter out biological impossibilities (Normal adult PD is ~54mm to ~74mm)
+            if distanceInMm > 45 && distanceInMm < 80 {
+                measurements.append(distanceInMm)
                 
-                // 1. Get the center position of both eyeballs (Column 3)
-                let leftEyeCenter = simd_make_float3(faceAnchor.leftEyeTransform.columns.3)
-                let rightEyeCenter = simd_make_float3(faceAnchor.rightEyeTransform.columns.3)
+                // Update the progress ring on the main thread
+                DispatchQueue.main.async {
+                    self.parent.progress = CGFloat(self.measurements.count) / CGFloat(self.requiredFrames)
+                }
                 
-                // 2. Get the forward-pointing vector of the eyes (Column 2 is the Z-axis in ARKit)
-                let leftEyeForward = simd_normalize(simd_make_float3(faceAnchor.leftEyeTransform.columns.2))
-                let rightEyeForward = simd_normalize(simd_make_float3(faceAnchor.rightEyeTransform.columns.2))
-                
-                // 3. Project forward by the radius of the eyeball to find the actual pupil surface
-                let leftPupilPos = leftEyeCenter + (leftEyeForward * eyeballRadius)
-                let rightPupilPos = rightEyeCenter + (rightEyeForward * eyeballRadius)
-                
-                // Calculate Euclidean distance in meters, convert to mm
-                let distanceInMeters = simd_distance(leftPupilPos, rightPupilPos)
-                let distanceInMm = distanceInMeters * 1000
-                
-                // Filter out biological impossibilities (Normal adult PD is ~54mm to ~74mm)
-                if distanceInMm > 45 && distanceInMm < 80 {
-                    measurements.append(distanceInMm)
+                // 3. Once we have enough frames, process the final result
+                if measurements.count >= requiredFrames {
+                    isDone = true
+                    
+                    // Let the utility handle the sorting and median math
+                    let finalPD = PDCalculator.processFinalPD(from: measurements)
                     
                     DispatchQueue.main.async {
-                        self.parent.progress = CGFloat(self.measurements.count) / CGFloat(self.requiredFrames)
-                    }
-                    
-                    if measurements.count >= requiredFrames {
-                        isDone = true
-                        
-                        // 4. STATISTICAL UPGRADE: Use the Median instead of Mean to drop glitches
-                        let sortedMeasurements = measurements.sorted()
-                        let medianPD = sortedMeasurements[sortedMeasurements.count / 2]
-                        
-                        DispatchQueue.main.async {
-                            // Standard optometry rounds to the nearest 0.5 mm
-                            let roundedPD = round(medianPD * 2) / 2
-                            self.parent.pdValue = String(format: "%.1f", roundedPD)
-                            self.parent.onComplete()
-                        }
+                        self.parent.pdValue = String(format: "%.1f", finalPD)
+                        self.parent.onComplete()
                     }
                 }
             }
         }
+    }
 }
 
