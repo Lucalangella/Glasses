@@ -2,8 +2,6 @@
 //  FaceScannerViewModel.swift
 //  Glasses
 //
-//  Created by Luca Langella 1 on 2/26/26.
-//
 
 import SwiftUI
 import ARKit
@@ -11,7 +9,10 @@ import Combine
 
 enum ScanState {
     case intro
-    case scanning
+    case focusCenter
+    case followDot
+    case removeGlasses
+    case measuring
     case processing
     case results
 }
@@ -23,56 +24,108 @@ struct FaceScanResults {
 class FaceScannerViewModel: ObservableObject {
     @Published var state: ScanState = .intro
     @Published var progress: CGFloat = 0.0
-    @Published var statusText: String = "Measuring"
+    @Published var statusText: String = ""
     @Published var scanResults = FaceScanResults()
     
-    // We can move the measurement array and logic here!
     private var pdMeasurements: [Double] = []
     private let requiredFrames: Int = 60
     
+    // Flags to prevent triggering timers multiple times
+    private var hasTriggeredFollowDotTimer: Bool = false
+    private var isWaitingForGlasses: Bool = false
+    
     func startScan() {
-        state = .scanning
-        progress = 0.0
         pdMeasurements.removeAll()
+        progress = 0.0
+        isWaitingForGlasses = false
+        hasTriggeredFollowDotTimer = false // Reset our new flag
+        
+        // Step 1: Initial Focus State
+        state = .focusCenter
+        statusText = "Focus on this dot. When it moves follow it."
     }
     
     func resetScan() {
         startScan()
     }
     
-    // The ViewModel processes the anchor, not the View!
     func processFaceAnchor(_ faceAnchor: ARFaceAnchor) {
-        guard state == .scanning else { return }
-        
         let lookAtPoint = faceAnchor.lookAtPoint
-        let isLookingAtCamera = abs(lookAtPoint.x) < 0.1 && abs(lookAtPoint.y) < 0.1
         
-        statusText = isLookingAtCamera ? "Measuring" : "Look forward and hold still"
-        guard isLookingAtCamera else { return }
+        // A forgiving check: are they generally looking towards the phone?
+        let isLookingAtPhone = abs(lookAtPoint.x) < 0.2 && abs(lookAtPoint.y) < 0.2
         
-        let distanceInMm = PDCalculator.calculateDistance(from: faceAnchor)
-        
-        if distanceInMm > 45 && distanceInMm < 80 {
-            pdMeasurements.append(distanceInMm)
-            progress = CGFloat(pdMeasurements.count) / CGFloat(requiredFrames)
-            
-            if pdMeasurements.count >= requiredFrames {
-                finishScanning()
+        switch state {
+        case .focusCenter:
+            if isLookingAtPhone {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    if self.state == .focusCenter {
+                        self.state = .followDot
+                        self.statusText = "Look here."
+                    }
+                }
             }
+            
+        case .followDot:
+            // Since users might tilt their head instead of moving their eyes,
+            // we give them 2 seconds to follow the dot to the camera lens naturally.
+            if !hasTriggeredFollowDotTimer {
+                hasTriggeredFollowDotTimer = true
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    if self.state == .followDot {
+                        self.state = .removeGlasses
+                        self.statusText = "Remove your glasses."
+                    }
+                }
+            }
+            
+        case .removeGlasses:
+            if !isWaitingForGlasses {
+                isWaitingForGlasses = true
+                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+                
+                // 3.5 seconds to take glasses off
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                    if self.state == .removeGlasses {
+                        self.state = .measuring
+                        self.statusText = "Measuring."
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    }
+                }
+            }
+            
+        case .measuring:
+            if isLookingAtPhone {
+                statusText = "Measuring."
+                let distanceInMm = PDCalculator.calculateDistance(from: faceAnchor)
+                
+                // Normal human PD range
+                if distanceInMm > 45 && distanceInMm < 80 {
+                    pdMeasurements.append(distanceInMm)
+                    progress = CGFloat(pdMeasurements.count) / CGFloat(requiredFrames)
+                    
+                    if pdMeasurements.count >= requiredFrames {
+                        finishScanning()
+                    }
+                }
+            } else {
+                statusText = "Keep looking at the dot."
+            }
+            
+        case .intro, .processing, .results:
+            break
         }
     }
     
     private func finishScanning() {
         let finalPD = PDCalculator.processFinalPD(from: pdMeasurements)
-        
-        // Trigger haptics from the ViewModel!
         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         
         state = .processing
         statusText = "Calculating..."
         scanResults.pd = finalPD
         
-        // Transition to results sheet
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.state = .results
         }

@@ -13,8 +13,11 @@ struct ContentView: View {
             ScrollView {
                 VStack(spacing: 32) {
                     
-                    FramesGridView(recommendedFrames: viewModel.recommendedFrames)
-                        .padding(.top, 16)
+                    FramesGridView(
+                        recommendedFrames: viewModel.recommendedFrames,
+                        recommendationReasons: viewModel.recommendationReasons
+                    )
+                    .padding(.top, 16)
                     
                     VStack(alignment: .trailing, spacing: 8) {
                         Text("Tabo")

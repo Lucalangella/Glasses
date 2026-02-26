@@ -1,15 +1,10 @@
 import SwiftUI
-import SceneKit
 import ARKit
 import RealityKit
 
 struct Glasses3DView: View {
     var frameName: String
     @State private var isShowingARView = false
-    
-    private var scene: SCNScene? {
-        return SCNScene(named: "\(frameName).usdz")
-    }
     
     var body: some View {
         VStack(spacing: 24) {
@@ -18,49 +13,37 @@ struct Glasses3DView: View {
                 .fontWeight(.bold)
                 .padding(.top, 40)
             
-            if scene != nil {
-                SceneView(
-                    scene: scene,
-                    options: [.autoenablesDefaultLighting, .allowsCameraControl]
-                )
-                .frame(height: 400)
-                .background(Color(UIColor.secondarySystemGroupedBackground))
-                .cornerRadius(16)
-                .padding()
-                
-                // AR Try-On Button
-                Button(action: {
-                    isShowingARView = true
-                }) {
-                    HStack {
-                        Image(systemName: "face.dashed")
-                            .font(.title2)
-                        Text("Virtual Try-On")
-                            .font(.headline)
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.accentColor)
-                    .cornerRadius(14)
+            VStack(spacing: 16) {
+                Image(systemName: "eyeglasses")
+                    .font(.system(size: 60))
+                    .foregroundColor(.accentColor)
+                Text("Ready for Virtual Try-On")
+                    .font(.headline)
+                Text("Using the TrueDepth camera, we will automatically scale these frames to your face for a perfect fit.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
                     .padding(.horizontal)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 300)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
+            .cornerRadius(16)
+            .padding()
+            
+            Button(action: { isShowingARView = true }) {
+                HStack {
+                    Image(systemName: "face.dashed")
+                        .font(.title2)
+                    Text("Virtual Try-On")
+                        .font(.headline)
                 }
-                
-            } else {
-                VStack(spacing: 16) {
-                    Image(systemName: "arkit")
-                        .font(.system(size: 60))
-                        .foregroundColor(.secondary)
-                    Text("Add '\(frameName).usdz' to your project to view the 3D model.")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+                .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 300)
-                .background(Color(UIColor.secondarySystemGroupedBackground))
-                .cornerRadius(16)
                 .padding()
+                .background(Color.accentColor)
+                .cornerRadius(14)
+                .padding(.horizontal)
             }
             
             Spacer()
@@ -68,7 +51,6 @@ struct Glasses3DView: View {
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("3D Preview")
         .navigationBarTitleDisplayMode(.inline)
-        // Presents the full-screen AR experience
         .fullScreenCover(isPresented: $isShowingARView) {
             ARFaceTrackingContainer(frameName: frameName, isPresented: $isShowingARView)
                 .ignoresSafeArea()
@@ -76,131 +58,160 @@ struct Glasses3DView: View {
     }
 }
 
+// MARK: - AR Container
 struct ARFaceTrackingContainer: View {
     var frameName: String
     @Binding var isPresented: Bool
     
-    // Debugger State Variables
-    @State private var modelScale: Float = 1.0
-    @State private var offsetX: Float = 0.0
-    @State private var offsetY: Float = 0.0
-    @State private var offsetZ: Float = 0.02 // Starts slightly forward so it doesn't clip into the nose
+    // Live Fine-Tuning States (Adjust these while wearing to find your model's "Sweet Spot")
+    @State private var modelScale: Float = 0.7
+    @State private var offsetY: Float = 0.01
+    @State private var offsetZ: Float = 0.02
     
     var body: some View {
         ZStack {
-            // The AR Camera View
             ARFaceTrackingView(
                 frameName: frameName,
                 modelScale: modelScale,
-                offsetX: offsetX,
                 offsetY: offsetY,
                 offsetZ: offsetZ
             )
             .ignoresSafeArea()
             
-            // Close Button
+            // UI Overlay
             VStack {
                 HStack {
                     Spacer()
-                    Button(action: {
-                        isPresented = false
-                    }) {
+                    Button(action: { isPresented = false }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 30))
                             .foregroundColor(.white)
                             .padding()
                             .background(Circle().fill(Color.black.opacity(0.4)))
                     }
-                    .padding(.top, 50)
-                    .padding(.trailing, 20)
                 }
-                Spacer()
-            }
-            
-            // MARK: - Live Debugger Panel
-            VStack {
+                .padding(.top, 50)
+                .padding(.trailing, 20)
+                
                 Spacer()
                 
-                VStack(spacing: 12) {
-                    Text("Live Positioning Debugger")
-                        .font(.headline)
-                        .foregroundColor(.primary)
+                // Fine-Tuning Panel
+                VStack(spacing: 20) {
+                    tuneSlider(title: "Size", value: $modelScale, range: 0.1...1.5)
+                    tuneSlider(title: "Height", value: $offsetY, range: -0.1...0.1)
+                    tuneSlider(title: "Depth", value: $offsetZ, range: -0.05...0.15)
                     
-                    debugSlider(title: "Scale", value: $modelScale, range: 0.1...3.0)
-                    debugSlider(title: "X (L/R)", value: $offsetX, range: -0.1...0.1)
-                    debugSlider(title: "Y (Up/Dn)", value: $offsetY, range: -0.1...0.1)
-                    debugSlider(title: "Z (In/Out)", value: $offsetZ, range: -0.1...0.2)
-                    
-                    Text("Copy these values when it looks right!")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
+                    Text("Current Fit: S:\(String(format: "%.2f", modelScale)) Y:\(String(format: "%.3f", offsetY)) Z:\(String(format: "%.3f", offsetZ))")
+                        .font(.caption.monospaced())
+                        .foregroundColor(.white)
                 }
                 .padding()
                 .background(.ultraThinMaterial)
                 .cornerRadius(20)
-                .padding(.horizontal)
-                .padding(.bottom, 40)
+                .padding()
             }
         }
     }
     
-    // Helper view for the debugger sliders
-    private func debugSlider(title: String, value: Binding<Float>, range: ClosedRange<Float>) -> some View {
+    private func tuneSlider(title: String, value: Binding<Float>, range: ClosedRange<Float>) -> some View {
         HStack {
-            Text("\(title):")
-                .font(.caption.monospacedDigit())
-                .frame(width: 75, alignment: .leading)
-            
+            Text(title).font(.caption).foregroundColor(.white).frame(width: 50, alignment: .leading)
             Slider(value: value, in: range)
-                .tint(.accentColor)
-            
-            Text(String(format: "%.3f", value.wrappedValue))
-                .font(.caption.monospacedDigit())
-                .frame(width: 50, alignment: .trailing)
         }
     }
 }
 
+// MARK: - AR View Implementation
 struct ARFaceTrackingView: UIViewRepresentable {
     var frameName: String
-    
-    // Incoming values from the SwiftUI sliders
     var modelScale: Float
-    var offsetX: Float
     var offsetY: Float
     var offsetZ: Float
     
     func makeUIView(context: Context) -> ARView {
         let arView = ARView(frame: .zero)
+        arView.session.delegate = context.coordinator
         
-        guard ARFaceTrackingConfiguration.isSupported else {
-            print("Face tracking is not supported on this device.")
-            return arView
-        }
+        guard ARFaceTrackingConfiguration.isSupported else { return arView }
         
         let configuration = ARFaceTrackingConfiguration()
+        configuration.isLightEstimationEnabled = true
         arView.session.run(configuration)
         
+        let faceAnchor = AnchorEntity(.face)
         if let glassesEntity = try? Entity.load(named: "\(frameName).usdz") {
-            // 1. Give the entity a specific name so we can find it later to update it
             glassesEntity.name = "virtualGlasses"
-            
-            let faceAnchor = AnchorEntity(.face)
+            applyGlassMaterials(to: glassesEntity)
             faceAnchor.addChild(glassesEntity)
-            arView.scene.addAnchor(faceAnchor)
         }
         
+        arView.scene.addAnchor(faceAnchor)
+        context.coordinator.arView = arView
         return arView
     }
     
-    // This function runs automatically every time a slider is dragged!
     func updateUIView(_ uiView: ARView, context: Context) {
-        // 2. Find the glasses model in the scene
-        guard let glassesEntity = uiView.scene.findEntity(named: "virtualGlasses") else { return }
+        if let glasses = uiView.scene.findEntity(named: "virtualGlasses") {
+            // Live updates from the Fine-Tuning Sliders
+            glasses.scale = SIMD3<Float>(repeating: modelScale)
+            glasses.position = SIMD3<Float>(0, offsetY, offsetZ)
+        }
+    }
+
+    private func applyGlassMaterials(to entity: Entity) {
+        if entity.name.lowercased().contains("lens"), let modelEntity = entity as? ModelEntity {
+            var glassMaterial = PhysicallyBasedMaterial()
+            glassMaterial.blending = .transparent(opacity: 0.12)
+            glassMaterial.roughness = 0.05
+            glassMaterial.specular = 1.0
+            glassMaterial.clearcoat = 1.0
+            glassMaterial.clearcoatRoughness = 0.01
+            glassMaterial.baseColor = .init(tint: UIColor(red: 0.9, green: 1.0, blue: 0.95, alpha: 0.1))
+            
+            modelEntity.model?.materials = [glassMaterial]
+        }
+        for child in entity.children { applyGlassMaterials(to: child) }
+    }
+    
+    func makeCoordinator() -> Coordinator { Coordinator() }
+    
+    class Coordinator: NSObject, ARSessionDelegate {
+        weak var arView: ARView?
+        var occlusionEntity: ModelEntity?
         
-        // 3. Update its size and position instantly
-        glassesEntity.scale = SIMD3<Float>(repeating: modelScale)
-        glassesEntity.position = SIMD3<Float>(offsetX, offsetY, offsetZ)
+        func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
+            guard let faceAnchor = anchors.compactMap({ $0 as? ARFaceAnchor }).first,
+                  let arView = arView else { return }
+            
+            // Dynamic Biometric Scaling
+            let leftEyePos = simd_make_float3(faceAnchor.leftEyeTransform.columns.3)
+            let rightEyePos = simd_make_float3(faceAnchor.rightEyeTransform.columns.3)
+            let currentEyeDistance = simd_distance(leftEyePos, rightEyePos)
+            
+            // Auto-scale relative to the standard 63mm IPD
+            let autoScaleFactor = currentEyeDistance / 0.063
+            
+            // Occlusion Logic (Invisible head mask)
+            if occlusionEntity == nil {
+                let occlusionMaterial = OcclusionMaterial()
+                if let device = MTLCreateSystemDefaultDevice(),
+                   let meshResource = try? generateFaceMesh(from: faceAnchor.geometry) {
+                    let faceModel = ModelEntity(mesh: meshResource, materials: [occlusionMaterial])
+                    arView.scene.anchors.first?.addChild(faceModel)
+                    self.occlusionEntity = faceModel
+                }
+            } else {
+                if let meshResource = try? generateFaceMesh(from: faceAnchor.geometry) {
+                    occlusionEntity?.model?.mesh = meshResource
+                }
+            }
+        }
+        
+        private func generateFaceMesh(from geometry: ARFaceGeometry) throws -> MeshResource {
+            var meshDescriptor = MeshDescriptor(name: "faceMesh")
+            meshDescriptor.positions = MeshBuffers.Positions(geometry.vertices)
+            meshDescriptor.primitives = .triangles(geometry.triangleIndices.map { UInt32($0) })
+            return try MeshResource.generate(from: [meshDescriptor])
+        }
     }
 }

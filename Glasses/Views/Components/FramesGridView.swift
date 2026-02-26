@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FramesGridView: View {
     var recommendedFrames: Set<String>
+    var recommendationReasons: [String]
     
     private let allFrames = [
         "aviator", "browline", "cateye",
@@ -18,7 +19,6 @@ struct FramesGridView: View {
     }
     
     // MARK: - Dynamic Columns
-    // Takes up to 3 columns, but scales down to 1 or 2 to fill the width if fewer frames are shown
     private var columns: [GridItem] {
         let activeCount = max(1, min(displayedFrames.count, 3))
         return Array(repeating: GridItem(.flexible(), spacing: 16), count: activeCount)
@@ -45,6 +45,30 @@ struct FramesGridView: View {
                 }
             }
             .padding(.horizontal)
+            
+            if !recommendationReasons.isEmpty {
+                let joinedReasons = recommendationReasons.joined(separator: " and your ")
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.accentColor)
+                        Text("Optical Recommendation")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.accentColor)
+                    }
+                    
+                    Text("Based on your \(joinedReasons), these frames are curated to optimize your visual clarity. Smaller, rounded shapes help center your pupils and significantly reduce lens edge thickness and peripheral distortion.")
+                        .font(.caption)
+                        .lineSpacing(4)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color.accentColor.opacity(0.05))
+                .cornerRadius(12)
+                .padding(.horizontal)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
             
             // MARK: - Grid
             LazyVGrid(columns: columns, spacing: 16) {

@@ -8,6 +8,7 @@ class OptometryViewModel: ObservableObject {
     var odActiveAxis: Double { prescription.od.activeAxis }
     var osActiveAxis: Double { prescription.os.activeAxis }
     var recommendedFrames: Set<String> { prescription.recommendedFrames }
+    var recommendationReasons: [String] { prescription.recommendationReasons }
     
     func toggleSign(eye: EyeType, field: FieldType) {
         switch eye {
