@@ -63,6 +63,8 @@ struct FramesGridView: View {
                                     .frame(maxWidth: .infinity)
                                     .background(Color(UIColor.secondarySystemGroupedBackground))
                                     .cornerRadius(12)
+                                    // 1. ADDED SHADOW FOR DEPTH
+                                    .shadow(color: Color.black.opacity(0.08), radius: 5, x: 0, y: 3)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
                                             .stroke(isRecommended ? Color.accentColor.opacity(0.5) : Color.clear, lineWidth: 2)
@@ -76,6 +78,8 @@ struct FramesGridView: View {
                                         .background(Color.accentColor)
                                         .clipShape(Circle())
                                         .offset(x: 6, y: -6)
+                                        // Optional: Add a tiny shadow to the badge too
+                                        .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
                                 }
                             }
                             
@@ -85,12 +89,28 @@ struct FramesGridView: View {
                                 .foregroundColor(.primary)
                         }
                     }
-                    .buttonStyle(.plain)
+                    // 2. REPLACED .plain WITH CUSTOM BUTTON STYLE
+                    .buttonStyle(CardButtonStyle())
                     .transition(.scale(scale: 0.8).combined(with: .opacity))
                 }
             }
             .padding(.horizontal)
+            .padding(.bottom, 8) // Added a bit of bottom padding so the shadow isn't clipped
             .animation(.spring(response: 0.4, dampingFraction: 0.75), value: displayedFrames)
         }
+    }
+}
+
+// MARK: - Custom Button Style
+// This creates the tactile "squish" effect when the user presses the frame
+struct CardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            // Scale down slightly when pressed
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            // Dim slightly when pressed
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            // Smooth bouncy animation for the interaction
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }

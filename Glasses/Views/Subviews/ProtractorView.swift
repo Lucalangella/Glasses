@@ -4,6 +4,10 @@ struct ProtractorView: View {
     @Binding var axisText: String
     var isOS: Bool
     
+    // Track if the user's finger is actively moving the needle
+    @State private var isDragging: Bool = false
+    @State private var lastHapticAngle: Int = -1
+    
     var axisValue: Double {
         Double(axisText) ?? 0
     }
@@ -44,7 +48,8 @@ struct ProtractorView: View {
 
                 ArrowPathShape(angle: visualAngle, center: center, radius: radius)
                     .stroke(Color.primary, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-                    .animation(.spring(response: 0.4, dampingFraction: 0.75), value: visualAngle)
+                    // Remove animation while dragging so the needle sticks perfectly to the finger
+                    .animation(isDragging ? .none : .spring(response: 0.4, dampingFraction: 0.75), value: visualAngle)
                 
                 Circle()
                     .fill(Color.primary)
@@ -55,7 +60,13 @@ struct ProtractorView: View {
             .gesture(
                 DragGesture(minimumDistance: 0) // 0 allows both taps and drags
                     .onChanged { value in
+                        isDragging = true
                         updateAxis(from: value.location, center: center)
+                    }
+                    .onEnded { _ in
+                        isDragging = false
+                        // Give a satisfying thunk when they let go of the needle
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     }
             )
         }
@@ -78,12 +89,23 @@ struct ProtractorView: View {
             angle = (angle > 270) ? 0 : 180
         }
 
-        let newVisualAngle = round(angle)
+        let newVisualAngle = Int(round(angle))
+        
+        // --- HAPTIC LOGIC ---
+        // Fire haptics as they drag across the physical degrees
+        if newVisualAngle != lastHapticAngle {
+            if newVisualAngle % 10 == 0 {
+                // A slightly heavier click on major 10-degree marks
+                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+            } else {
+                // A light tick on every single degree
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+            lastHapticAngle = newVisualAngle
+        }
         
         // Reverse the visual angle math to get the actual Rx Axis
-        var newAxis = isOS ? newVisualAngle : 180 - newVisualAngle
-        
-
+        let newAxis = isOS ? Double(newVisualAngle) : 180.0 - Double(newVisualAngle)
         
         // Update the bound text field directly
         axisText = String(format: "%.0f", newAxis)
@@ -102,8 +124,6 @@ struct ProtractorView: View {
             .position(x: x, y: y)
     }
 }
-
-// Keep your existing ProtractorBackgroundShape and ArrowPathShape down here...
 
 struct ProtractorBackgroundShape: Shape {
     let radius: CGFloat

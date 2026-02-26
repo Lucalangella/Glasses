@@ -5,6 +5,8 @@ struct VisualRulerScaleView: View {
     
     // Ruler configuration
     @State private var dragOffset: CGFloat = 0
+    @State private var lastHapticValue: Double = 0 // Tracks haptics during drag
+    
     private let range: ClosedRange<Double> = -20.0...20.0
     private let tickSpacing: CGFloat = 20
     private let pointsPerDiopter: CGFloat = 80 // 20 spacing * 4 ticks per diopter (0.25 steps)
@@ -65,20 +67,34 @@ struct VisualRulerScaleView: View {
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { drag in
+                            // 1. Update the visual offset
                             dragOffset = drag.translation.width
+                            
+                            // 2. Play a light "tick" as the user drags over notches
+                            let offsetDiopters = Double(-dragOffset / pointsPerDiopter)
+                            let rawValue = value + offsetDiopters
+                            let snapped = round(rawValue * 4) / 4
+                            
+                            if snapped != lastHapticValue {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                lastHapticValue = snapped
+                            }
                         }
                         .onEnded { drag in
-                            let offsetDiopters = Double(-drag.translation.width / pointsPerDiopter)
-                            let rawValue = value + offsetDiopters
+                            // 3. THE MAGIC: Calculate velocity and add momentum
+                            // We use predictedEndTranslation to see where they "flicked" it
+                            let predictedOffset = Double(-drag.predictedEndTranslation.width / pointsPerDiopter)
+                            let predictedRawValue = value + predictedOffset
                             
-                            // Snap to nearest 0.25
-                            let snapped = round(rawValue * 4) / 4
+                            // 4. Snap the predicted landing spot to the nearest 0.25 notch
+                            let snapped = round(predictedRawValue * 4) / 4
                             let clamped = min(max(snapped, range.lowerBound), range.upperBound)
                             
-                            // Haptic click when snapping into place
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            // 5. Fire a slightly heavier haptic to signify it "locked" in
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                            // 6. Smoothly animate the wheel spinning to its final resting place
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                                 value = clamped
                                 dragOffset = 0
                             }
@@ -120,6 +136,10 @@ struct VisualRulerScaleView: View {
             RoundedRectangle(cornerRadius: 24)
                 .stroke(Color.primary.opacity(0.05), lineWidth: 1)
         )
+        // Reset haptic state when view appears
+        .onAppear {
+            lastHapticValue = value
+        }
     }
     
     // MARK: - Helpers
@@ -165,9 +185,4 @@ struct VisualRulerScaleView: View {
         if val >= 0.25 { return .orange.opacity(0.8) }
         return .green.opacity(0.8)
     }
-}
-
-#Preview {
-    VisualRulerScaleView(value: .constant(-2.75))
-        .padding()
 }

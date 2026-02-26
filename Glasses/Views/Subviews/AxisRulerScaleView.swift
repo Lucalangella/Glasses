@@ -3,20 +3,26 @@ import SwiftUI
 struct AxisRulerScaleView: View {
     @Binding var value: Double
     
-    // Drag state for real-time calculation
-    @State private var initialDragValue: Double = 0
-    @State private var isDragging: Bool = false
-    @State private var lastHapticValue: Int = 0
+    // Ruler configuration
+    @State private var dragOffset: CGFloat = 0
+    @State private var lastHapticValue: Int = 0 // Tracks haptics during drag
     
     private let range: ClosedRange<Double> = 0.0...180.0
     private let pointsPerDegree: CGFloat = 8 // Distance between each 1-degree tick
+    
+    // Calculates the live value while the user's finger is dragging
+    var currentVisualValue: Double {
+        let offsetDegrees = Double(-dragOffset / pointsPerDegree)
+        return value + offsetDegrees
+    }
     
     var body: some View {
         VStack(spacing: 0) {
             
             // MARK: - 1. Large Display Header
             VStack(spacing: 4) {
-                Text("\(Int(round(value)))°")
+                // Ensure we never display a negative 0 or out of bounds number during the bounce
+                Text("\(Int(max(0, min(180, round(currentVisualValue)))))°")
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .monospacedDigit()
@@ -37,7 +43,7 @@ struct AxisRulerScaleView: View {
                     // Ticks
                     ForEach(0...180, id: \.self) { tickInt in
                         let tick = Double(tickInt)
-                        let distance = tick - value
+                        let distance = tick - currentVisualValue
                         let xOffset = center + CGFloat(distance) * pointsPerDegree
                         
                         // Optimization: Only render ticks that are currently visible
@@ -64,32 +70,36 @@ struct AxisRulerScaleView: View {
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { drag in
-                            // 1. Capture the starting value when the drag begins
-                            if !isDragging {
-                                isDragging = true
-                                initialDragValue = value
-                                lastHapticValue = Int(value)
+                            // 1. Update the visual offset
+                            dragOffset = drag.translation.width
+                            
+                            // 2. Play a light "tick" as the user drags over degrees
+                            let offsetDegrees = Double(-dragOffset / pointsPerDegree)
+                            let rawValue = value + offsetDegrees
+                            let snapped = Int(round(rawValue))
+                            
+                            if snapped != lastHapticValue && snapped >= Int(range.lowerBound) && snapped <= Int(range.upperBound) {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                lastHapticValue = snapped
                             }
+                        }
+                        .onEnded { drag in
+                            // 3. THE MAGIC: Calculate velocity and add momentum
+                            let predictedOffset = Double(-drag.predictedEndTranslation.width / pointsPerDegree)
+                            let predictedRawValue = value + predictedOffset
                             
-                            // 2. Calculate the new position based on how far the finger moved
-                            let offsetDegrees = Double(-drag.translation.width / pointsPerDegree)
-                            let rawValue = initialDragValue + offsetDegrees
-                            
-                            // 3. Snap to 1 degree increments and clamp to bounds
-                            let snapped = round(rawValue)
+                            // 4. Snap the predicted landing spot to the nearest whole degree
+                            let snapped = round(predictedRawValue)
                             let clamped = min(max(snapped, range.lowerBound), range.upperBound)
                             
-                            // 4. Play a light haptic tick ONLY when crossing over a new degree
-                            if Int(clamped) != lastHapticValue {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                lastHapticValue = Int(clamped)
-                            }
+                            // 5. Fire a slightly heavier haptic to signify it "locked" in
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             
-                            // 5. Update the binding in real-time! This instantly spins the protractor above.
-                            value = clamped
-                        }
-                        .onEnded { _ in
-                            isDragging = false
+                            // 6. Smoothly animate the wheel spinning to its final resting place
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                value = clamped
+                                dragOffset = 0
+                            }
                         }
                 )
             }
@@ -114,6 +124,10 @@ struct AxisRulerScaleView: View {
             RoundedRectangle(cornerRadius: 24)
                 .stroke(Color.primary.opacity(0.05), lineWidth: 1)
         )
+        // Reset haptic state when view appears
+        .onAppear {
+            lastHapticValue = Int(value)
+        }
     }
     
     // MARK: - Helpers
