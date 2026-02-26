@@ -10,18 +10,9 @@ struct FramesGridView: View {
         "rectangle", "round", "square"
     ]
     
-    private var displayedFrames: [String] {
-        if recommendedFrames.isEmpty {
-            return allFrames
-        } else {
-            return allFrames.filter { recommendedFrames.contains($0) }
-        }
-    }
-    
-    // MARK: - Dynamic Columns
+    // Always show all frames — never remove items so the grid height stays constant.
     private var columns: [GridItem] {
-        let activeCount = max(1, min(displayedFrames.count, 3))
-        return Array(repeating: GridItem(.flexible(), spacing: 16), count: activeCount)
+        Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
     }
     
     var body: some View {
@@ -46,34 +37,33 @@ struct FramesGridView: View {
             }
             .padding(.horizontal)
             
-            if !recommendationReasons.isEmpty {
-                let joinedReasons = recommendationReasons.joined(separator: " and your ")
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundColor(.accentColor)
-                        Text("Optical Recommendation")
-                            .font(.subheadline.bold())
-                            .foregroundColor(.accentColor)
-                    }
-                    
-                    Text("Based on your \(joinedReasons), these frames are curated to optimize your visual clarity. Smaller, rounded shapes help center your pupils and significantly reduce lens edge thickness and peripheral distortion.")
-                        .font(.caption)
-                        .lineSpacing(4)
-                        .foregroundColor(.secondary)
+            let joinedReasons = recommendationReasons.joined(separator: " and your ")
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(.accentColor)
+                    Text("Optical Recommendation")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.accentColor)
                 }
-                .padding()
-                .background(Color.accentColor.opacity(0.05))
-                .cornerRadius(12)
-                .padding(.horizontal)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+
+                Text("Based on your \(joinedReasons), these frames are curated to optimize your visual clarity. Smaller, rounded shapes help center your pupils and significantly reduce lens edge thickness and peripheral distortion.")
+                    .font(.caption)
+                    .lineSpacing(4)
+                    .foregroundColor(.secondary)
             }
+            .padding()
+            .background(Color.accentColor.opacity(0.05))
+            .cornerRadius(12)
+            .padding(.horizontal)
+            .opacity(recommendationReasons.isEmpty ? 0 : 1)
+            .animation(.easeInOut(duration: 0.2), value: recommendationReasons.isEmpty)
             
             // MARK: - Grid
             LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(displayedFrames, id: \.self) { frameName in
-                    let isRecommended = !recommendedFrames.isEmpty
+                ForEach(allFrames, id: \.self) { frameName in
+                    let isRecommended = !recommendedFrames.isEmpty && recommendedFrames.contains(frameName)
+                    let isDimmed = !recommendedFrames.isEmpty && !recommendedFrames.contains(frameName)
                     
                     NavigationLink(value: frameName) {
                         VStack(spacing: 8) {
@@ -115,12 +105,12 @@ struct FramesGridView: View {
                     }
                     // 2. REPLACED .plain WITH CUSTOM BUTTON STYLE
                     .buttonStyle(CardButtonStyle())
-                    .transition(.scale(scale: 0.8).combined(with: .opacity))
+                    .opacity(isDimmed ? 0.35 : 1.0)
+                    .animation(.easeInOut(duration: 0.25), value: isDimmed)
                 }
             }
             .padding(.horizontal)
-            .padding(.bottom, 8) // Added a bit of bottom padding so the shadow isn't clipped
-            .animation(.spring(response: 0.4, dampingFraction: 0.75), value: displayedFrames)
+            .padding(.bottom, 8)
         }
     }
 }

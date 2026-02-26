@@ -19,6 +19,10 @@ struct ContentView: View {
                     )
                     .padding(.top, 16)
                     
+                    // Lens Materials & Visualization - immediately after frames
+                    LensVisualizationView(prescription: $viewModel.prescription)
+                        .padding(.top, 8)
+                    
                     VStack(alignment: .trailing, spacing: 8) {
                         Text("Tabo")
                             .font(.title3)
@@ -98,6 +102,14 @@ struct ContentView: View {
             .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Clarity")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: PrescriptionGuideView()) {
+                        Image(systemName: "questionmark.circle")
+                            .foregroundColor(.accentColor)
+                    }
+                }
+            }
             .navigationDestination(for: String.self) { frameName in
                 Glasses3DView(frameName: frameName)
             }
