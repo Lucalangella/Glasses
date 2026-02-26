@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct ProtractorView: View {
-    var axisValue: Double
+    @Binding var axisText: String
     var isOS: Bool
+    
+    var axisValue: Double {
+        Double(axisText) ?? 0
+    }
     
     var normalizedValue: Double {
         if axisValue == 0 || axisValue == 180 { return axisValue }
@@ -47,7 +51,42 @@ struct ProtractorView: View {
                     .frame(width: 8, height: 8)
                     .position(x: center.x, y: center.y)
             }
+            .contentShape(Rectangle()) // Makes the whole ZStack tappable/draggable
+            .gesture(
+                DragGesture(minimumDistance: 0) // 0 allows both taps and drags
+                    .onChanged { value in
+                        updateAxis(from: value.location, center: center)
+                    }
+            )
         }
+    }
+
+    private func updateAxis(from location: CGPoint, center: CGPoint) {
+        let dx = location.x - center.x
+        let dy = center.y - location.y // Invert Y because SwiftUI coordinates go down
+
+        var angle = atan2(dy, dx) * 180 / .pi
+
+        // Normalize to positive degrees
+        if angle < 0 {
+            angle += 360
+        }
+
+        // Constrain to the upper semicircle (0 to 180)
+        if angle > 180 {
+            // If they drag below the line, snap to the closest edge (0 or 180)
+            angle = (angle > 270) ? 0 : 180
+        }
+
+        let newVisualAngle = round(angle)
+        
+        // Reverse the visual angle math to get the actual Rx Axis
+        var newAxis = isOS ? newVisualAngle : 180 - newVisualAngle
+        
+
+        
+        // Update the bound text field directly
+        axisText = String(format: "%.0f", newAxis)
     }
 
     func labelView(valueToShow: Int, theta: Double, radius: CGFloat, center: CGPoint) -> some View {
@@ -63,6 +102,8 @@ struct ProtractorView: View {
             .position(x: x, y: y)
     }
 }
+
+// Keep your existing ProtractorBackgroundShape and ArrowPathShape down here...
 
 struct ProtractorBackgroundShape: Shape {
     let radius: CGFloat

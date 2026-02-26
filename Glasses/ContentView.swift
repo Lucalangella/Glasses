@@ -19,14 +19,14 @@ struct ContentView: View {
                         
                         HStack(spacing: 16) {
                             VStack {
-                                ProtractorView(axisValue: viewModel.odActiveAxis, isOS: false)
-                                    .frame(height: 160)
-                                Text("OD")
-                                    .font(.title)
-                            }
+                                ProtractorView(axisText: $viewModel.prescription.od.axis, isOS: false)
+                                            .frame(height: 160)
+                                    Text("OD")
+                                        .font(.title)
+                                }
                             
                             VStack(spacing: 6) {
-                                Text("PD")
+                                Text("Pupillary Distance (PD)")
                                     .font(.headline)
                                     .foregroundColor(.secondary)
                                 
@@ -48,11 +48,11 @@ struct ContentView: View {
                             .padding(.top, 50)
                             
                             VStack {
-                                ProtractorView(axisValue: viewModel.osActiveAxis, isOS: true)
-                                    .frame(height: 160)
-                                Text("OS")
-                                    .font(.title)
-                            }
+                                ProtractorView(axisText: $viewModel.prescription.os.axis, isOS: true)
+                                            .frame(height: 160)
+                                    Text("OS")
+                                        .font(.title)
+                                }
                         }
                     }
                     .padding(.horizontal)
