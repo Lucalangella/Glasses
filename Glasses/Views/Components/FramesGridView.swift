@@ -20,7 +20,7 @@ struct FramesGridView: View {
             
             // MARK: - Header
             HStack {
-                Text(recommendedFrames.isEmpty ? "All Frame Styles" : "Recommended Styles")
+                Text("Frames")
                     .font(.headline)
                     .foregroundColor(recommendedFrames.isEmpty ? .secondary : .accentColor)
                 
@@ -37,28 +37,7 @@ struct FramesGridView: View {
             }
             .padding(.horizontal)
             
-            let joinedReasons = recommendationReasons.joined(separator: " and your ")
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundColor(.accentColor)
-                    Text("Optical Recommendation")
-                        .font(.subheadline.bold())
-                        .foregroundColor(.accentColor)
-                }
 
-                Text("Based on your \(joinedReasons), these frames are curated to optimize your visual clarity. Smaller, rounded shapes help center your pupils and significantly reduce lens edge thickness and peripheral distortion.")
-                    .font(.caption)
-                    .lineSpacing(4)
-                    .foregroundColor(.secondary)
-            }
-            .padding()
-            .background(Color.accentColor.opacity(0.05))
-            .cornerRadius(12)
-            .padding(.horizontal)
-            .opacity(recommendationReasons.isEmpty ? 0 : 1)
-            .animation(.easeInOut(duration: 0.2), value: recommendationReasons.isEmpty)
-            
             // MARK: - Grid
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(allFrames, id: \.self) { frameName in
@@ -111,6 +90,29 @@ struct FramesGridView: View {
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
+            
+            let joinedReasons = recommendationReasons.joined(separator: " and your ")
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(.accentColor)
+                    Text("Optical Recommendation")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.accentColor)
+                }
+
+                Text("Based on your \(joinedReasons), these frames are curated to optimize your visual clarity. Smaller, rounded shapes help center your pupils and significantly reduce lens edge thickness and peripheral distortion.")
+                    .font(.caption)
+                    .lineSpacing(4)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color.accentColor.opacity(0.05))
+            .cornerRadius(12)
+            .padding(.horizontal)
+            .opacity(recommendationReasons.isEmpty ? 0 : 1)
+            .animation(.easeInOut(duration: 0.2), value: recommendationReasons.isEmpty)
+            
         }
     }
 }

@@ -88,6 +88,10 @@ struct EyeLensCard: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.bottom, 14)
+            .onChange(of: selectedIndex) { _, _ in
+                // Notify the walkthrough that the user interacted with the lens picker
+                NotificationCenter.default.post(name: .lensIndexChanged, object: nil)
+            }
 
             // Lens cross-section
             LensCrossSectionView(
@@ -128,13 +132,11 @@ struct LensCrossSectionView: View {
     let power: Double
     let refractiveIndex: Double
 
-    /// Colour matching the reference chart blue.
     private let lensColor = Color(red: 0.45, green: 0.63, blue: 0.82)
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                // Filled lens body
                 LensCrossSectionShape(power: power, refractiveIndex: refractiveIndex)
                     .fill(
                         LinearGradient(
@@ -144,7 +146,6 @@ struct LensCrossSectionView: View {
                         )
                     )
 
-                // Subtle top highlight for a glassy feel
                 LensCrossSectionShape(power: power, refractiveIndex: refractiveIndex)
                     .fill(
                         LinearGradient(
@@ -154,7 +155,6 @@ struct LensCrossSectionView: View {
                         )
                     )
 
-                // Outline
                 LensCrossSectionShape(power: power, refractiveIndex: refractiveIndex)
                     .stroke(lensColor.opacity(0.9), lineWidth: 1.2)
             }
@@ -168,11 +168,8 @@ struct LensCrossSectionShape: Shape {
     let power: Double
     let refractiveIndex: Double
 
-    /// Fraction of the display height that the maximum thickness occupies.
-    /// Scales with power and is reduced for higher refractive indices (physics-based).
     private var thicknessRatio: Double {
         guard abs(power) >= 0.25 else { return 0.0 }
-        // t ∝ 1/(n-1), normalised to 1.59 as the baseline
         let indexScale = 0.59 / (refractiveIndex - 1.0)
         return min(abs(power) * 0.082 * indexScale, 0.88)
     }
@@ -185,51 +182,40 @@ struct LensCrossSectionShape: Shape {
         let midX = W / 2.0
         let midY = H / 2.0
 
-        // Max thickness in pixels
         let maxT: CGFloat = H * thicknessRatio
-        // Min (center) thickness — always a thin visible sliver
         let minT: CGFloat = max(H * 0.08, 7)
 
         if power < -0.25 {
-            // ── MINUS LENS ────────────────────────────────────────────────
-            // Flat top surface; concave (rising) bottom surface.
-            // Edges are thick (maxT), center is thin (minT).
-
             let effectiveMaxT = max(maxT, minT + H * 0.06)
-            let topY          = midY - effectiveMaxT / 2     // flat top (centered)
-            let bottomEdgeY   = midY + effectiveMaxT / 2     // bottom at edges
-            let centerBottomY = bottomEdgeY - (effectiveMaxT - minT) // concave bottom rises at center
+            let topY          = midY - effectiveMaxT / 2
+            let bottomEdgeY   = midY + effectiveMaxT / 2
+            let centerBottomY = bottomEdgeY - (effectiveMaxT - minT)
 
             path.move(to: CGPoint(x: 0, y: topY))
-            path.addLine(to: CGPoint(x: W, y: topY))              // flat top
-            path.addLine(to: CGPoint(x: W, y: bottomEdgeY))       // right edge down
-            path.addQuadCurve(                                      // concave bottom
+            path.addLine(to: CGPoint(x: W, y: topY))
+            path.addLine(to: CGPoint(x: W, y: bottomEdgeY))
+            path.addQuadCurve(
                 to: CGPoint(x: 0, y: bottomEdgeY),
                 control: CGPoint(x: midX, y: centerBottomY)
             )
             path.closeSubpath()
 
         } else if power > 0.25 {
-            // ── PLUS LENS ─────────────────────────────────────────────────
-            // Convex (rising) top surface; flat bottom surface.
-            // Center is thick (maxT), edges are thin (minT).
-
             let effectiveMaxT = max(maxT, minT + H * 0.06)
-            let topEdgeY   = midY - minT / 2                 // top at edges (centered)
-            let centerTopY = midY - effectiveMaxT / 2        // top at center (highest point)
-            let bottomY    = midY + effectiveMaxT / 2        // flat bottom
+            let topEdgeY   = midY - minT / 2
+            let centerTopY = midY - effectiveMaxT / 2
+            let bottomY    = midY + effectiveMaxT / 2
 
             path.move(to: CGPoint(x: 0, y: topEdgeY))
-            path.addQuadCurve(                                      // convex top
+            path.addQuadCurve(
                 to: CGPoint(x: W, y: topEdgeY),
                 control: CGPoint(x: midX, y: centerTopY)
             )
-            path.addLine(to: CGPoint(x: W, y: bottomY))            // right edge down
-            path.addLine(to: CGPoint(x: 0, y: bottomY))            // flat bottom
+            path.addLine(to: CGPoint(x: W, y: bottomY))
+            path.addLine(to: CGPoint(x: 0, y: bottomY))
             path.closeSubpath()
 
         } else {
-            // ── PLANO ─────────────────────────────────────────────────────
             let thickness: CGFloat = max(H * 0.09, 7)
             path.addRect(CGRect(x: 0, y: midY - thickness / 2, width: W, height: thickness))
         }
