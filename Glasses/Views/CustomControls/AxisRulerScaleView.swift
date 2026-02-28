@@ -5,17 +5,22 @@ struct AxisRulerScaleView: View {
     
     // Ruler configuration
     @State private var dragOffset: CGFloat = 0
-    @State private var lastHapticValue: Int = 0 // Tracks haptics during drag
-    @State private var baseValue: Double? = nil // Captures the start value for smooth dragging
+    @State private var lastHapticValue: Int = 0
+    @State private var baseValue: Double = 0
+    @State private var isDragging: Bool = false
     
     private let range: ClosedRange<Double> = 0.0...180.0
-    private let pointsPerDegree: CGFloat = 8 // Distance between each 1-degree tick
+    private let pointsPerDegree: CGFloat = 8
     
-    // Calculates the live value while the user's finger is dragging
+    // Calculates the snapped value for the UI (Header + Ticks)
     var currentVisualValue: Double {
-        let base = baseValue ?? value
+        if !isDragging { return value }
+        
         let offsetDegrees = Double(-dragOffset / pointsPerDegree)
-        return base + offsetDegrees
+        let rawValue = baseValue + offsetDegrees
+        
+        // Snap to whole degrees for Axis
+        return round(rawValue).clamped(to: range)
     }
     
     var body: some View {
@@ -23,8 +28,7 @@ struct AxisRulerScaleView: View {
             
             // MARK: - 1. Large Display Header
             VStack(spacing: 4) {
-                // Ensure we never display a negative 0 or out of bounds number during the bounce
-                Text("\(Int(max(0, min(180, round(currentVisualValue)))))°")
+                Text("\(Int(currentVisualValue))°")
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .monospacedDigit()
@@ -43,20 +47,19 @@ struct AxisRulerScaleView: View {
                 
                 ZStack {
                     // Ticks
-                    ForEach(0...180, id: \.self) { tickInt in
+                    ForEach(stride(from: 0, through: 180, by: 1).map { $0 }, id: \.self) { tickInt in
                         let tick = Double(tickInt)
                         let distance = tick - currentVisualValue
                         let xOffset = center + CGFloat(distance) * pointsPerDegree
                         
-                        // Optimization: Only render ticks that are currently visible
                         if xOffset > -30 && xOffset < width + 30 {
                             tickView(for: tickInt)
-                                .position(x: xOffset, y: 30) // Center vertically in the 60pt height
+                                .position(x: xOffset, y: 30)
                         }
                     }
                     
-                    // Center Fixed Indicator (The yellow line and gray dot)
-                    VStack(spacing: 4) {
+                    // Center Fixed Indicator
+                    VStack(spacing: 16) {
                         Rectangle()
                             .fill(Color.yellow)
                             .frame(width: 2, height: 32)
@@ -68,65 +71,46 @@ struct AxisRulerScaleView: View {
                     }
                     .position(x: center, y: 30)
                 }
-                .contentShape(Rectangle()) // Make the area draggable
+                .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { drag in
-                            // Capture the base value when the drag starts
-                            if baseValue == nil {
+                            if !isDragging {
+                                isDragging = true
                                 baseValue = value
                             }
                             
-                            // 1. Update the visual offset
                             dragOffset = drag.translation.width
                             
-                            // 2. Play a light "tick" as the user drags over degrees
-                            let rawValue = currentVisualValue
-                            let snapped = Int(round(rawValue))
+                            let snapped = Int(currentVisualValue)
                             
-                            if snapped != lastHapticValue && snapped >= Int(range.lowerBound) && snapped <= Int(range.upperBound) {
+                            if snapped != lastHapticValue {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 lastHapticValue = snapped
-                            }
-                            
-                            // 3. LIVE UPDATE: Update the external value so the protractor moves in real-time
-                            let clamped = min(max(Double(snapped), range.lowerBound), range.upperBound)
-                            if value != clamped {
-                                value = clamped
+                                
+                                // Live update the binding so external views (like a protractor) move
+                                if value != Double(snapped) {
+                                    value = Double(snapped)
+                                }
                             }
                         }
                         .onEnded { drag in
-                            // Calculate velocity and add momentum
+                            // Add momentum calculation
                             let predictedOffset = Double(-drag.predictedEndTranslation.width / pointsPerDegree)
-                            let base = baseValue ?? value
-                            let predictedRawValue = base + predictedOffset
+                            let predictedRawValue = baseValue + predictedOffset
+                            let finalValue = round(predictedRawValue).clamped(to: range)
                             
-                            // Snap the predicted landing spot to the nearest whole degree
-                            let snapped = round(predictedRawValue)
-                            let clamped = min(max(snapped, range.lowerBound), range.upperBound)
-                            
-                            // Fire a slightly heavier haptic to signify it "locked" in
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             
-                            // Calculate the target drag offset that corresponds to the clamped value
-                            let targetOffset = CGFloat(-(clamped - base) * pointsPerDegree)
-                            
-                            // Smoothly animate the wheel spinning to its final resting place
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                dragOffset = targetOffset
-                                value = clamped
-                            }
-                            
-                            // Clean up internal state after the animation completes
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                                baseValue = nil
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                value = finalValue
                                 dragOffset = 0
+                                isDragging = false
                             }
                         }
                 )
             }
             .frame(height: 60)
-            // Fade out the edges of the ruler
             .mask(
                 LinearGradient(
                     gradient: Gradient(stops: [
@@ -142,17 +126,10 @@ struct AxisRulerScaleView: View {
         }
         .background(Color(UIColor.tertiarySystemFill))
         .cornerRadius(24)
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
-        )
-        // Reset haptic state when view appears
         .onAppear {
             lastHapticValue = Int(value)
         }
     }
-    
-    // MARK: - Helpers
     
     @ViewBuilder
     private func tickView(for tick: Int) -> some View {
@@ -170,10 +147,10 @@ struct AxisRulerScaleView: View {
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.secondary)
             } else {
-                Text("0")
-                    .font(.system(size: 10))
-                    .opacity(0) // Invisible spacer
+                Text("0").font(.system(size: 10)).opacity(0)
             }
         }
     }
 }
+
+

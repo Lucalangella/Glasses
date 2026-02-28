@@ -1,40 +1,52 @@
+
 import SwiftUI
 
 struct VisualRulerScaleView: View {
     @Binding var value: Double
-    
-    // Ruler configuration
-    @State private var dragOffset: CGFloat = 0
-    @State private var lastHapticValue: Double = 0 // Tracks haptics during drag
-    @State private var baseValue: Double? = nil // Captures the start value for smooth dragging
-    
-    private let range: ClosedRange<Double> = -20.0...20.0
-    private let tickSpacing: CGFloat = 20
-    private let pointsPerDiopter: CGFloat = 80 // 20 spacing * 4 ticks per diopter (0.25 steps)
-    
-    // Calculates the live value while the user's finger is dragging
-    var currentVisualValue: Double {
-        let base = baseValue ?? value
-        let offsetDiopters = Double(-dragOffset / pointsPerDiopter)
-        return base + offsetDiopters
+        
+        // Ruler configuration
+        @State private var dragOffset: CGFloat = 0
+        @State private var lastHapticValue: Double = 0
+        @State private var baseValue: Double = 0 // Initialize with 0
+        @State private var isDragging: Bool = false // Tracks if we are currently mid-drag
+        
+        private let range: ClosedRange<Double> = -20.0...20.0
+        private let pointsPerDiopter: CGFloat = 80
+    private let step: Double = 0.25
+        
+        // This is the source of truth for the Header and the Ticks
+        var currentVisualValue: Double {
+            // If not dragging, show the actual binding value
+            if !isDragging { return value }
+            
+            // If dragging, calculate the offset from where the drag started
+            let offsetDiopters = Double(-dragOffset / pointsPerDiopter)
+            let rawValue = baseValue + offsetDiopters
+            
+            // Snap to 0.25 and clamp to range
+            return (round(rawValue * 4) / 4).clamped(to: range)
+        }
+
+    // 2. Simplify the formatter so it just displays the snapped value
+    private func formatValue(_ val: Double) -> String {
+        // No more internal rounding here; currentVisualValue is already snapped
+        if abs(val) < 0.01 { return "0.00" }
+        return String(format: "%+.2f", val)
     }
     
     var body: some View {
         VStack(spacing: 0) {
-            
-            // MARK: - 1. Large Display Header
+            // MARK: - 1. Header
             VStack(spacing: 6) {
                 Text(formatValue(currentVisualValue))
                     .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
                     .monospacedDigit()
                 
                 Text(conditionText(for: currentVisualValue))
                     .font(.subheadline.weight(.medium))
                     .foregroundColor(conditionColor(for: currentVisualValue))
             }
-            .padding(.top, 24)
-            .padding(.bottom, 32)
+            .padding(.vertical, 24)
             
             // MARK: - 2. Scrolling Ruler
             GeometryReader { geo in
@@ -42,81 +54,60 @@ struct VisualRulerScaleView: View {
                 let center = width / 2
                 
                 ZStack {
-                    // Ticks
-                    ForEach(stride(from: range.lowerBound, through: range.upperBound, by: 0.25).map { $0 }, id: \.self) { tick in
+                    // Ticks Layer
+                    // Optimization: stride is fine, but moved map inside or used id: \.self
+                    ForEach(stride(from: range.lowerBound, through: range.upperBound, by: step).map { $0 }, id: \.self) { tick in
                         let distance = tick - currentVisualValue
                         let xOffset = center + CGFloat(distance) * pointsPerDiopter
                         
-                        // Optimization: Only render ticks that are currently visible on screen
                         if xOffset > -20 && xOffset < width + 20 {
                             tickView(for: tick)
-                                .position(x: xOffset, y: 30) // Vertical center of the 60pt area
+                                .position(x: xOffset, y: 30)
                         }
                     }
                     
-                    // Center Fixed Indicator (The blue selector line)
-                    VStack {
-                        Rectangle()
-                            .fill(Color.accentColor)
-                            .frame(width: 3, height: 40)
-                            .cornerRadius(1.5)
-                        Spacer()
-                    }
-                    .frame(height: 60)
-                    .position(x: center, y: 30)
+                    // Center Indicator
+                    Rectangle()
+                        .fill(Color.accentColor)
+                        .frame(width: 3, height: 40)
+                        .cornerRadius(1.5)
+                        .position(x: center, y: 30)
                 }
-                .contentShape(Rectangle()) // Make the entire transparent area draggable
+                .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { drag in
-                            if baseValue == nil {
-                                baseValue = value
+                            if !isDragging {
+                                isDragging = true
+                                baseValue = value // Capture the starting point immediately
                             }
                             
-                            // 1. Update the visual offset
                             dragOffset = drag.translation.width
                             
-                            // 2. Play a light "tick" as the user drags over notches
-                            let rawValue = currentVisualValue
-                            let snapped = round(rawValue * 4) / 4
+                            let snapped = currentVisualValue
                             
+                            // Only trigger haptics when the visible number actually changes
                             if snapped != lastHapticValue {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 lastHapticValue = snapped
-                            }
-                            
-                            // 3. LIVE UPDATE
-                            let clamped = min(max(snapped, range.lowerBound), range.upperBound)
-                            if value != clamped {
-                                value = clamped
+                                
+                                // Optional: Update the binding live so other UI
+                                // elements react to the "snapped" changes
+                                if value != snapped {
+                                    value = snapped
+                                }
                             }
                         }
-                        .onEnded { drag in
-                            // Calculate velocity and add momentum
-                            let predictedOffset = Double(-drag.predictedEndTranslation.width / pointsPerDiopter)
-                            let base = baseValue ?? value
-                            let predictedRawValue = base + predictedOffset
-                            let snapped = round(predictedRawValue * 4) / 4
-                            let clamped = min(max(snapped, range.lowerBound), range.upperBound)
-                            
-                            let targetOffset = CGFloat(-(clamped - base) * pointsPerDiopter)
-                            
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                dragOffset = targetOffset
-                                value = clamped
-                            }
-                            
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                                baseValue = nil
+                        .onEnded { _ in
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                                 dragOffset = 0
+                                isDragging = false
                             }
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         }
                 )
             }
             .frame(height: 60)
-            // Fades out the edges of the ruler for a premium 3D cylinder effect
             .mask(
                 LinearGradient(
                     gradient: Gradient(stops: [
@@ -128,32 +119,21 @@ struct VisualRulerScaleView: View {
                     startPoint: .leading, endPoint: .trailing
                 )
             )
-            .padding(.bottom, 24)
             
-            // MARK: - 3. Visual Guide Arrows
+            // MARK: - 3. Labels
             HStack {
-                Image(systemName: "arrow.left")
-                Text("Myopia")
+                Label("Myopia", systemImage: "arrow.left")
                 Spacer()
-                Text("Hyperopia")
-                Image(systemName: "arrow.right")
+                Label("Hyperopia", systemImage: "arrow.right")
             }
+            .labelStyle(.titleAndIcon)
             .font(.caption2.weight(.semibold))
             .foregroundColor(.secondary.opacity(0.6))
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
-            
         }
         .background(Color(UIColor.tertiarySystemFill))
         .cornerRadius(24)
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(Color.primary.opacity(0.05), lineWidth: 1)
-        )
-        // Reset haptic state when view appears
-        .onAppear {
-            lastHapticValue = value
-        }
     }
     
     // MARK: - Helpers
@@ -182,12 +162,6 @@ struct VisualRulerScaleView: View {
         }
     }
     
-    private func formatValue(_ val: Double) -> String {
-        let snapped = round(val * 4) / 4 // Ensures the live drag text shows rounded steps
-        if abs(snapped) < 0.05 { return "0.00" }
-        return String(format: "%+.2f", snapped)
-    }
-    
     private func conditionText(for val: Double) -> String {
         if val <= -0.25 { return "Increasing Myopia" }
         if val >= 0.25 { return "Increasing Hyperopia" }
@@ -198,5 +172,12 @@ struct VisualRulerScaleView: View {
         if val <= -0.25 { return .blue.opacity(0.8) }
         if val >= 0.25 { return .orange.opacity(0.8) }
         return .green.opacity(0.8)
+    }
+}
+
+// Helper to keep code clean
+extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
     }
 }

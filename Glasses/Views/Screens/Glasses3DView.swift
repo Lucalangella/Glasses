@@ -23,11 +23,12 @@ struct Glasses3DView: View {
                      scene: scene,
                      options: [.autoenablesDefaultLighting, .allowsCameraControl]
                  )
-                 .frame(height: 400)
+                 .frame(height: 00)
                  .background(Color(UIColor.secondarySystemGroupedBackground))
                  .cornerRadius(16)
                  .padding()
                  
+                 Spacer()
                  // AR Try-On Button
                  Button(action: {
                      isShowingARView = true
@@ -35,7 +36,7 @@ struct Glasses3DView: View {
                      HStack {
                          Image(systemName: "face.dashed")
                              .font(.title2)
-                         Text("Virtual Try-On")
+                         Text("AR Try-On")
                              .font(.headline)
                      }
                      .foregroundColor(.white)

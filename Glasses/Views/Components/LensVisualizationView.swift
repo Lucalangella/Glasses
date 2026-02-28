@@ -88,10 +88,6 @@ struct EyeLensCard: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.bottom, 14)
-            .onChange(of: selectedIndex) { _, _ in
-                // Notify the walkthrough that the user interacted with the lens picker
-                NotificationCenter.default.post(name: .lensIndexChanged, object: nil)
-            }
 
             // Lens cross-section
             LensCrossSectionView(
@@ -132,11 +128,13 @@ struct LensCrossSectionView: View {
     let power: Double
     let refractiveIndex: Double
 
+    /// Colour matching the reference chart blue.
     private let lensColor = Color(red: 0.45, green: 0.63, blue: 0.82)
 
     var body: some View {
-        GeometryReader { geo in
+        GeometryReader { geo in      
             ZStack {
+                // Filled lens body
                 LensCrossSectionShape(power: power, refractiveIndex: refractiveIndex)
                     .fill(
                         LinearGradient(
@@ -146,6 +144,7 @@ struct LensCrossSectionView: View {
                         )
                     )
 
+                // Subtle top highlight for a glassy feel
                 LensCrossSectionShape(power: power, refractiveIndex: refractiveIndex)
                     .fill(
                         LinearGradient(
@@ -155,6 +154,7 @@ struct LensCrossSectionView: View {
                         )
                     )
 
+                // Outline
                 LensCrossSectionShape(power: power, refractiveIndex: refractiveIndex)
                     .stroke(lensColor.opacity(0.9), lineWidth: 1.2)
             }
@@ -168,56 +168,71 @@ struct LensCrossSectionShape: Shape {
     let power: Double
     let refractiveIndex: Double
 
+    // 1. Lower the scaling factor to accommodate up to 20.00
+    // 2. We use a non-linear scale (sqrt) so low powers aren't "invisible"
+    //    while high powers don't clip.
     private var thicknessRatio: Double {
-        guard abs(power) >= 0.25 else { return 0.0 }
-        let indexScale = 0.59 / (refractiveIndex - 1.0)
-        return min(abs(power) * 0.082 * indexScale, 0.88)
+        let absPower = abs(power)
+        guard absPower >= 0.12 else { return 0.05 }
+        
+        // Baseline: At 20.00 power, 1.50 index, we want roughly 90% height.
+        // indexScale: High index (1.74) reduces thickness by ~30% compared to 1.50
+        let indexScale = (1.50 - 1.0) / (refractiveIndex - 1.0)
+        
+        // Linear scale for 20.0 max: (absPower / 20.0) * indexScale
+        // We'll cap it at 0.95 to leave a tiny margin
+        return min((absPower / 20.0) * 0.9 * indexScale, 0.95)
     }
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
-
-        let W    = rect.width
-        let H    = rect.height
-        let midX = W / 2.0
+        let W = rect.width
+        let H = rect.height
+        
+        // Calculate dynamic thicknesses based on the frame height
+        let maxT = H * thicknessRatio
+        let minT = H * 0.1 // 10% height minimum for the thin part
+        
+        // Center the lens vertically
         let midY = H / 2.0
 
-        let maxT: CGFloat = H * thicknessRatio
-        let minT: CGFloat = max(H * 0.08, 7)
-
-        if power < -0.25 {
-            let effectiveMaxT = max(maxT, minT + H * 0.06)
-            let topY          = midY - effectiveMaxT / 2
-            let bottomEdgeY   = midY + effectiveMaxT / 2
-            let centerBottomY = bottomEdgeY - (effectiveMaxT - minT)
-
+        if power < -0.12 {
+            // MINUS: Thick edges, thin center
+            // Total height at edges = maxT + minT
+            let halfHeight = (maxT + minT) / 2
+            let topY = midY - halfHeight
+            let bottomEdgeY = midY + halfHeight
+            let centerBottomY = topY + minT // The gap in the middle
+            
             path.move(to: CGPoint(x: 0, y: topY))
             path.addLine(to: CGPoint(x: W, y: topY))
             path.addLine(to: CGPoint(x: W, y: bottomEdgeY))
             path.addQuadCurve(
                 to: CGPoint(x: 0, y: bottomEdgeY),
-                control: CGPoint(x: midX, y: centerBottomY)
+                control: CGPoint(x: W/2, y: centerBottomY)
             )
             path.closeSubpath()
 
-        } else if power > 0.25 {
-            let effectiveMaxT = max(maxT, minT + H * 0.06)
-            let topEdgeY   = midY - minT / 2
-            let centerTopY = midY - effectiveMaxT / 2
-            let bottomY    = midY + effectiveMaxT / 2
-
-            path.move(to: CGPoint(x: 0, y: topEdgeY))
+        } else if power > 0.12 {
+            // PLUS: Thin edges, thick center
+            let halfHeight = (maxT + minT) / 2
+            let edgeTopY = midY - (minT / 2)
+            let edgeBottomY = midY + (minT / 2)
+            let centerTopY = midY - halfHeight
+            
+            path.move(to: CGPoint(x: 0, y: edgeTopY))
             path.addQuadCurve(
-                to: CGPoint(x: W, y: topEdgeY),
-                control: CGPoint(x: midX, y: centerTopY)
+                to: CGPoint(x: W, y: edgeTopY),
+                control: CGPoint(x: W/2, y: centerTopY)
             )
-            path.addLine(to: CGPoint(x: W, y: bottomY))
-            path.addLine(to: CGPoint(x: 0, y: bottomY))
+            path.addLine(to: CGPoint(x: W, y: edgeBottomY))
+            path.addLine(to: CGPoint(x: 0, y: edgeBottomY))
             path.closeSubpath()
-
+            
         } else {
-            let thickness: CGFloat = max(H * 0.09, 7)
-            path.addRect(CGRect(x: 0, y: midY - thickness / 2, width: W, height: thickness))
+            // PLANO
+            let pHeight = H * 0.1
+            path.addRect(CGRect(x: 0, y: midY - pHeight/2, width: W, height: pHeight))
         }
 
         return path
