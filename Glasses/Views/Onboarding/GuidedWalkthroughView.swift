@@ -7,7 +7,6 @@ struct WalkthroughStep {
     let title: String
     let body: String
     let icon: String
-    let accentColor: Color
     /// The task label shown while the step is incomplete.
     let task: String?
     /// When true, the "Next" button stays disabled until the task is done.
@@ -54,7 +53,7 @@ struct WalkthroughOverlay: View {
     
     private var cutoutRect: CGRect? {
         guard let rect = currentRect else { return nil }
-        return rect.insetBy(dx: -12, dy: -10)
+        return rect.insetBy(dx: 8, dy: -10)
     }
     
     var body: some View {
@@ -69,7 +68,7 @@ struct WalkthroughOverlay: View {
                 // 2 — Highlighted section border glow
                 if let rect = cutoutRect {
                     RoundedRectangle(cornerRadius: 20)
-                        .stroke(step.accentColor.opacity(0.5), lineWidth: 2)
+                        .stroke(.blue.opacity(0.5), lineWidth: 2)
                         .frame(width: rect.width, height: rect.height)
                         .position(x: rect.midX, y: rect.midY)
                         .allowsHitTesting(false)
@@ -101,17 +100,18 @@ struct WalkthroughOverlay: View {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(step.accentColor.opacity(0.15))
+                            .fill(.blue
+                                .opacity(0.15))
                             .frame(width: 40, height: 40)
                         Image(systemName: step.icon)
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(step.accentColor)
+                            .foregroundColor(.blue)
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Step \(currentStepIndex + 1) of \(steps.count)")
                             .font(.caption2.weight(.bold))
-                            .foregroundColor(step.accentColor)
+                            .foregroundColor(.blue)
                             .textCase(.uppercase)
                         
                         Text(step.title)
@@ -132,7 +132,7 @@ struct WalkthroughOverlay: View {
                 if step.requiresCompletion {
                     HStack(spacing: 8) {
                         Image(systemName: stepCompleted ? "checkmark.circle.fill" : "hand.tap")
-                            .foregroundColor(stepCompleted ? .green : step.accentColor)
+                            .foregroundColor(stepCompleted ? .green : .blue)
                             .font(.body.weight(.semibold))
                             .contentTransition(.symbolEffect(.replace))
                         
@@ -145,22 +145,16 @@ struct WalkthroughOverlay: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(stepCompleted ? Color.green.opacity(0.1) : step.accentColor.opacity(0.08))
+                            .fill(
+                                stepCompleted ? Color.green
+                                    .opacity(0.1) : Color.blue
+                                    .opacity(0.08)
+                            )
                     )
                 }
                 
                 // Navigation
                 HStack {
-                    // Skip Tour
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            isActive = false
-                        }
-                    }) {
-                        Text("Skip Tour")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
                     
                     Spacer()
                     
@@ -168,7 +162,10 @@ struct WalkthroughOverlay: View {
                     HStack(spacing: 5) {
                         ForEach(0..<steps.count, id: \.self) { i in
                             Circle()
-                                .fill(i <= currentStepIndex ? step.accentColor : Color.secondary.opacity(0.25))
+                                .fill(
+                                    i <= currentStepIndex ? Color.blue : Color.secondary
+                                        .opacity(0.25)
+                                )
                                 .frame(width: 6, height: 6)
                         }
                     }
@@ -184,7 +181,10 @@ struct WalkthroughOverlay: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 10)
-                            .background(canAdvance ? step.accentColor : Color.gray.opacity(0.35))
+                            .background(
+                                canAdvance ? Color.blue : Color.gray
+                                    .opacity(0.35)
+                            )
                             .cornerRadius(20)
                     }
                     .disabled(!canAdvance)

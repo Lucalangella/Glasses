@@ -25,7 +25,6 @@ struct ContentView: View {
             title: "Sphere (SPH)",
             body: "Tap SPH to open the ruler, then drag to set a value. Minus (−) means nearsighted, plus (+) means farsighted. This is the main power of your lens.",
             icon: "doc.text.fill",
-            accentColor: .blue,
             task: "Try it: tap SPH and drag the ruler to set a value",
             requiresCompletion: true
         ),
@@ -34,7 +33,6 @@ struct ContentView: View {
             title: "Cylinder (CYL)",
             body: "CYL corrects astigmatism — an irregular curve in your cornea. If your prescription card shows 0.00 for CYL, you don't have astigmatism. Otherwise, tap CYL and set your value.",
             icon: "eye.fill",
-            accentColor: .indigo,
             task: "Try it: tap CYL and drag the ruler to set a value",
             requiresCompletion: true
         ),
@@ -43,7 +41,6 @@ struct ContentView: View {
             title: "Cylinder Axis",
             body: "The axis (0°–180°) tells the lab exactly where to orient your cylinder correction. Tap AXIS to open the ruler and drag to match the number on your prescription card.",
             icon: "dial.low.fill",
-            accentColor: .purple,
             task: "Try it: tap AXIS and drag the ruler to set a value",
             requiresCompletion: true
         ),
@@ -52,7 +49,6 @@ struct ContentView: View {
             title: "Pupillary Distance",
             body: "PD is the distance between the centers of your pupils, in millimeters. It ensures your lenses are perfectly aligned. Type it in manually or tap the face icon to measure with AR.",
             icon: "faceid",
-            accentColor: .pink,
             task: "Try it: enter a PD value or measure with AR",
             requiresCompletion: true
         ),
@@ -61,7 +57,6 @@ struct ContentView: View {
             title: "Lens Thickness",
             body: "This shows how your prescription affects lens thickness. A higher index (1.67, 1.74) makes lenses thinner and lighter. Try switching between the segments to compare.",
             icon: "cube.transparent.fill",
-            accentColor: .cyan,
             task: "Try it: tap a different lens index to see the change",
             requiresCompletion: true
         ),
@@ -70,7 +65,6 @@ struct ContentView: View {
             title: "Frame Recommendations",
             body: "Clarity filters frames based on optical rules from your prescription and PD. Tap any frame to see it in 3D or try it on your face with AR.",
             icon: "eyeglasses",
-            accentColor: .orange,
             task: nil,
             requiresCompletion: false
         )
@@ -88,7 +82,7 @@ struct ContentView: View {
                                 .font(.title2.weight(.bold))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            Text("Enter your numbers below — Clarity will recommend the best frames and lenses for your eyes.")
+                            Text("Enter your numbers below. Clarity will recommend the best frames and lenses for your eyes.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)

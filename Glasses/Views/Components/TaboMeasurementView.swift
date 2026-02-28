@@ -33,7 +33,7 @@ struct TaboMeasurementView: View {
                     // Stacked vertically to prevent horizontal squishing on smaller iPhones
                     VStack(spacing: 12) {
                         HStack(spacing: 2) {
-                            TextField("63.0", text: $pdValue)
+                            TextField("00.0", text: $pdValue)
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.center)
                                 .frame(width: 44)
@@ -50,15 +50,14 @@ struct TaboMeasurementView: View {
                         
                         // THE AR SCANNER BUTTON
                         if ARFaceTrackingConfiguration.isSupported {
-                            Button(action: {
+                            Button {
                                 isShowingScanner = true
-                            }) {
-                                Image(systemName: "faceid")
-                                    .font(.title3)
-                                    .foregroundColor(.white)
-                                    .padding(10)
-                                    .background(Color.accentColor)
-                                    .clipShape(Circle())
+                            } label: {                                    Image(systemName: "faceid")
+                                .font(.title3)
+                                .foregroundColor(.white)
+                                .padding(10)
+                                .background(Color.accentColor)
+                                .clipShape(Capsule())
                             }
                             .buttonStyle(.plain)
                             // Subtle shadow to make the CTA pop

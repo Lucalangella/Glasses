@@ -22,7 +22,6 @@ struct FramesGridView: View {
             HStack {
                 Text("Frames")
                     .font(.headline)
-                    .foregroundColor(recommendedFrames.isEmpty ? .secondary : .accentColor)
                 
                 Spacer()
                 
