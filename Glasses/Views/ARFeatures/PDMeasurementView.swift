@@ -1,4 +1,3 @@
-
 import SwiftUI
 import ARKit
 import RealityKit
@@ -8,8 +7,7 @@ struct PDMeasurementView: View {
     @Binding var pdValue: String
     
     @State private var progress: CGFloat = 0.0
-    // FIX 1: Update instructions to be explicit about glasses
-    @State private var instructions = "Remove glasses and look at the Camera Lens."
+    @State private var instructions = "Look directly at the Camera Lens." // Text updated here
     
     var body: some View {
         ZStack {
@@ -62,22 +60,7 @@ struct PDMeasurementView: View {
                         .rotationEffect(.degrees(-90))
                         .animation(.linear(duration: 0.1), value: progress)
                     
-                    // FIX 2: Add a prominent "Remove Glasses" icon before scanning starts
-                    if progress == 0 {
-                        VStack(spacing: 12) {
-                            ZStack {
-                                Image(systemName: "eyeglasses")
-                                    .font(.system(size: 50))
-                                    .foregroundColor(.white.opacity(0.8))
-                                
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 30, weight: .bold))
-                                    .foregroundColor(.red.opacity(0.9))
-                                    .offset(y: -2)
-                            }
-                        }
-                        .transition(.opacity)
-                    }
+                    // Removed the crossed-out glasses icon from here
                 }
                 
                 Spacer()

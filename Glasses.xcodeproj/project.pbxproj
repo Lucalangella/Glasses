@@ -6,18 +6,7 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		BA7446412F50CDC800E48E47 /* LensSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7446402F50CDC800E48E47 /* LensSelectionView.swift */; };
-		BA7446432F50CE1500E48E47 /* LensCoatingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7446422F50CE1500E48E47 /* LensCoatingsView.swift */; };
-		BA7446452F50CE5A00E48E47 /* PrescriptionGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7446442F50CE5A00E48E47 /* PrescriptionGuideView.swift */; };
-		BA7446472F50D04200E48E47 /* LensVisualizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7446462F50D04200E48E47 /* LensVisualizationView.swift */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
-		BA7446402F50CDC800E48E47 /* LensSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensSelectionView.swift; sourceTree = "<group>"; };
-		BA7446422F50CE1500E48E47 /* LensCoatingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensCoatingsView.swift; sourceTree = "<group>"; };
-		BA7446442F50CE5A00E48E47 /* PrescriptionGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrescriptionGuideView.swift; sourceTree = "<group>"; };
-		BA7446462F50D04200E48E47 /* LensVisualizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LensVisualizationView.swift; sourceTree = "<group>"; };
 		BAF040442F4E64FE00430761 /* Glasses.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Glasses.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -45,10 +34,6 @@
 			children = (
 				BAF040462F4E64FE00430761 /* Glasses */,
 				BAF040452F4E64FE00430761 /* Products */,
-				BA7446402F50CDC800E48E47 /* LensSelectionView.swift */,
-				BA7446422F50CE1500E48E47 /* LensCoatingsView.swift */,
-				BA7446442F50CE5A00E48E47 /* PrescriptionGuideView.swift */,
-				BA7446462F50D04200E48E47 /* LensVisualizationView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -134,10 +119,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BA7446432F50CE1500E48E47 /* LensCoatingsView.swift in Sources */,
-				BA7446472F50D04200E48E47 /* LensVisualizationView.swift in Sources */,
-				BA7446452F50CE5A00E48E47 /* PrescriptionGuideView.swift in Sources */,
-				BA7446412F50CDC800E48E47 /* LensSelectionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

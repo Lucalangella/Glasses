@@ -23,67 +23,13 @@ struct ContentView: View {
                     LensVisualizationView(prescription: $viewModel.prescription)
                         .padding(.top, 8)
                     
-                    VStack(alignment: .trailing, spacing: 8) {
-                        Text("Tabo")
-                            .font(.title3)
-                            .padding(.trailing, 8)
-                        
-                        HStack(spacing: 16) {
-                            VStack {
-                                ProtractorView(axisText: $viewModel.prescription.od.axis, isOS: false)
-                                    .frame(height: 160)
-                                Text("OD")
-                                    .font(.title)
-                            }
-                            
-                            VStack(spacing: 6) {
-                                Text("Pupillary Distance (PD)")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                                
-                                HStack(spacing: 8) {
-                                    HStack(spacing: 2) {
-                                        TextField("63.0", text: $viewModel.prescription.pd)
-                                            .keyboardType(.decimalPad)
-                                            .multilineTextAlignment(.center)
-                                            .frame(width: 44)
-                                        
-                                        Text("mm")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 10)
-                                    .background(Color(UIColor.secondarySystemGroupedBackground))
-                                    .cornerRadius(12)
-                                    
-                                    // THE AR SCANNER BUTTON
-                                    if ARFaceTrackingConfiguration.isSupported {
-                                        Button(action: {
-                                            isShowingScanner = true
-                                        }) {
-                                            Image(systemName: "faceid")
-                                                .font(.title2)
-                                                .foregroundColor(.accentColor)
-                                                .padding(8)
-                                                .background(Color.accentColor.opacity(0.1))
-                                                .cornerRadius(10)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                            }
-                            .padding(.top, 50)
-                            
-                            VStack {
-                                ProtractorView(axisText: $viewModel.prescription.os.axis, isOS: true)
-                                    .frame(height: 160)
-                                Text("OS")
-                                    .font(.title)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
+                    TaboMeasurementView(
+                        odAxis: $viewModel.prescription.od.axis,
+                        osAxis: $viewModel.prescription.os.axis,
+                        pdValue: $viewModel.prescription.pd,
+                        isShowingScanner: $isShowingScanner
+                    )
+
                     
                     PrescriptionTableView(
                         odSphere: $viewModel.prescription.od.sphere,

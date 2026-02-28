@@ -14,7 +14,7 @@ struct IntroSheetView: View {
         VStack(spacing: 24) {
             Text("Advisor")
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(Color(red: 0.1, green: 0.4, blue: 0.3))
+                
             
             Text("For best results")
                 .font(.title2.weight(.bold))

@@ -1,8 +1,3 @@
-//
-//  FaceScannerViewModel.swift
-//  Glasses
-//
-
 import SwiftUI
 import ARKit
 import Combine
@@ -11,7 +6,6 @@ enum ScanState {
     case intro
     case focusCenter
     case followDot
-    case removeGlasses
     case measuring
     case processing
     case results
@@ -32,13 +26,11 @@ class FaceScannerViewModel: ObservableObject {
     
     // Flags to prevent triggering timers multiple times
     private var hasTriggeredFollowDotTimer: Bool = false
-    private var isWaitingForGlasses: Bool = false
     
     func startScan() {
         pdMeasurements.removeAll()
         progress = 0.0
-        isWaitingForGlasses = false
-        hasTriggeredFollowDotTimer = false // Reset our new flag
+        hasTriggeredFollowDotTimer = false
         
         // Step 1: Initial Focus State
         state = .focusCenter
@@ -74,20 +66,6 @@ class FaceScannerViewModel: ObservableObject {
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                     if self.state == .followDot {
-                        self.state = .removeGlasses
-                        self.statusText = "Remove your glasses."
-                    }
-                }
-            }
-            
-        case .removeGlasses:
-            if !isWaitingForGlasses {
-                isWaitingForGlasses = true
-                UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
-                
-                // 3.5 seconds to take glasses off
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
-                    if self.state == .removeGlasses {
                         self.state = .measuring
                         self.statusText = "Measuring."
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -119,15 +97,15 @@ class FaceScannerViewModel: ObservableObject {
     }
     
     private func finishScanning() {
-        let finalPD = PDCalculator.processFinalPD(from: pdMeasurements)
-        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-        
-        state = .processing
-        statusText = "Calculating..."
-        scanResults.pd = finalPD
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.state = .results
+            let finalPD = PDCalculator.processFinalPD(from: pdMeasurements)
+            UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+            
+            state = .processing
+            statusText = "Complete!"
+            scanResults.pd = finalPD
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                self.state = .results
+            }
         }
-    }
 }

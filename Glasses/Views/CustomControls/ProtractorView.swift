@@ -199,3 +199,19 @@ struct ArrowPathShape: Shape {
         return p
     }
 }
+
+
+
+#Preview {
+    @Previewable @State var axisText: String = "90"
+    
+    VStack(spacing: 40) {
+        Text("Axis: \(axisText)°")
+            .font(.largeTitle)
+            .bold()
+        
+        ProtractorView(axisText: $axisText, isOS: true)
+            .frame(height: 250)
+            .padding()
+    }
+}

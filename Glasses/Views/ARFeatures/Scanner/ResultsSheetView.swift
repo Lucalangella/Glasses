@@ -16,8 +16,7 @@ struct ResultsSheetView: View {
         VStack(spacing: 24) {
             Text("Advisor")
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(Color(red: 0.1, green: 0.4, blue: 0.3))
-            
+                
             Text("Your measurement")
                 .font(.title2.weight(.bold))
                 .foregroundColor(.black)
@@ -44,7 +43,7 @@ struct ResultsSheetView: View {
                         Spacer()
                     }
                     
-                    Text("This is the distance between your pupils. We use this measurement to center your prescription perfectly in your new frames.")
+                    Text("This is the distance between your pupils. While this AR scan provides a close estimate, always rely on an optometrist for your official prescription.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.leading, 38)
