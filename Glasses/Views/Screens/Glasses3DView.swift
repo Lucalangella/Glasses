@@ -1,4 +1,5 @@
 import SwiftUI
+import SceneKit
 import ARKit
 import RealityKit
 
@@ -6,45 +7,61 @@ struct Glasses3DView: View {
     var frameName: String
     @State private var isShowingARView = false
     
-    var body: some View {
-        VStack(spacing: 24) {
-            Text(frameName.capitalized.replacingOccurrences(of: "_", with: " "))
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .padding(.top, 40)
-            
-            VStack(spacing: 16) {
-                Image(systemName: "eyeglasses")
-                    .font(.system(size: 60))
-                    .foregroundColor(.accentColor)
-                Text("Ready for Virtual Try-On")
-                    .font(.headline)
-                Text("Using the TrueDepth camera, we will automatically scale these frames to your face for a perfect fit.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 300)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .cornerRadius(16)
-            .padding()
-            
-            Button(action: { isShowingARView = true }) {
-                HStack {
-                    Image(systemName: "face.dashed")
-                        .font(.title2)
-                    Text("Virtual Try-On")
-                        .font(.headline)
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.accentColor)
-                .cornerRadius(14)
-                .padding(.horizontal)
-            }
+    private var scene: SCNScene? {
+         return SCNScene(named: "\(frameName).usdz")
+     }
+     
+     var body: some View {
+         VStack(spacing: 24) {
+             Text(frameName.capitalized.replacingOccurrences(of: "_", with: " "))
+                 .font(.largeTitle)
+                 .fontWeight(.bold)
+                 .padding(.top, 40)
+             
+             if scene != nil {
+                 SceneView(
+                     scene: scene,
+                     options: [.autoenablesDefaultLighting, .allowsCameraControl]
+                 )
+                 .frame(height: 400)
+                 .background(Color(UIColor.secondarySystemGroupedBackground))
+                 .cornerRadius(16)
+                 .padding()
+                 
+                 // AR Try-On Button
+                 Button(action: {
+                     isShowingARView = true
+                 }) {
+                     HStack {
+                         Image(systemName: "face.dashed")
+                             .font(.title2)
+                         Text("Virtual Try-On")
+                             .font(.headline)
+                     }
+                     .foregroundColor(.white)
+                     .frame(maxWidth: .infinity)
+                     .padding()
+                     .background(Color.accentColor)
+                     .cornerRadius(14)
+                     .padding(.horizontal)
+                 }
+                 
+             } else {
+                 VStack(spacing: 16) {
+                     Image(systemName: "arkit")
+                         .font(.system(size: 60))
+                         .foregroundColor(.secondary)
+                     Text("Add '\(frameName).usdz' to your project to view the 3D model.")
+                         .font(.callout)
+                         .foregroundColor(.secondary)
+                         .multilineTextAlignment(.center)
+                 }
+                 .frame(maxWidth: .infinity)
+                 .frame(height: 300)
+                 .background(Color(UIColor.secondarySystemGroupedBackground))
+                 .cornerRadius(16)
+                 .padding()
+             }
             
             Spacer()
         }
