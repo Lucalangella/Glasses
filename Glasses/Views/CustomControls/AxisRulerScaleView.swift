@@ -6,14 +6,16 @@ struct AxisRulerScaleView: View {
     // Ruler configuration
     @State private var dragOffset: CGFloat = 0
     @State private var lastHapticValue: Int = 0 // Tracks haptics during drag
+    @State private var baseValue: Double? = nil // Captures the start value for smooth dragging
     
     private let range: ClosedRange<Double> = 0.0...180.0
     private let pointsPerDegree: CGFloat = 8 // Distance between each 1-degree tick
     
     // Calculates the live value while the user's finger is dragging
     var currentVisualValue: Double {
+        let base = baseValue ?? value
         let offsetDegrees = Double(-dragOffset / pointsPerDegree)
-        return value + offsetDegrees
+        return base + offsetDegrees
     }
     
     var body: some View {
@@ -70,34 +72,54 @@ struct AxisRulerScaleView: View {
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { drag in
+                            // Capture the base value when the drag starts
+                            if baseValue == nil {
+                                baseValue = value
+                            }
+                            
                             // 1. Update the visual offset
                             dragOffset = drag.translation.width
                             
                             // 2. Play a light "tick" as the user drags over degrees
-                            let offsetDegrees = Double(-dragOffset / pointsPerDegree)
-                            let rawValue = value + offsetDegrees
+                            let rawValue = currentVisualValue
                             let snapped = Int(round(rawValue))
                             
                             if snapped != lastHapticValue && snapped >= Int(range.lowerBound) && snapped <= Int(range.upperBound) {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 lastHapticValue = snapped
                             }
+                            
+                            // 3. LIVE UPDATE: Update the external value so the protractor moves in real-time
+                            let clamped = min(max(Double(snapped), range.lowerBound), range.upperBound)
+                            if value != clamped {
+                                value = clamped
+                            }
                         }
                         .onEnded { drag in
-                            // 3. THE MAGIC: Calculate velocity and add momentum
+                            // Calculate velocity and add momentum
                             let predictedOffset = Double(-drag.predictedEndTranslation.width / pointsPerDegree)
-                            let predictedRawValue = value + predictedOffset
+                            let base = baseValue ?? value
+                            let predictedRawValue = base + predictedOffset
                             
-                            // 4. Snap the predicted landing spot to the nearest whole degree
+                            // Snap the predicted landing spot to the nearest whole degree
                             let snapped = round(predictedRawValue)
                             let clamped = min(max(snapped, range.lowerBound), range.upperBound)
                             
-                            // 5. Fire a slightly heavier haptic to signify it "locked" in
+                            // Fire a slightly heavier haptic to signify it "locked" in
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             
-                            // 6. Smoothly animate the wheel spinning to its final resting place
+                            // Calculate the target drag offset that corresponds to the clamped value
+                            let targetOffset = CGFloat(-(clamped - base) * pointsPerDegree)
+                            
+                            // Smoothly animate the wheel spinning to its final resting place
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                dragOffset = targetOffset
                                 value = clamped
+                            }
+                            
+                            // Clean up internal state after the animation completes
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                                baseValue = nil
                                 dragOffset = 0
                             }
                         }

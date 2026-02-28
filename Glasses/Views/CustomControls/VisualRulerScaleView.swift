@@ -6,6 +6,7 @@ struct VisualRulerScaleView: View {
     // Ruler configuration
     @State private var dragOffset: CGFloat = 0
     @State private var lastHapticValue: Double = 0 // Tracks haptics during drag
+    @State private var baseValue: Double? = nil // Captures the start value for smooth dragging
     
     private let range: ClosedRange<Double> = -20.0...20.0
     private let tickSpacing: CGFloat = 20
@@ -13,8 +14,9 @@ struct VisualRulerScaleView: View {
     
     // Calculates the live value while the user's finger is dragging
     var currentVisualValue: Double {
+        let base = baseValue ?? value
         let offsetDiopters = Double(-dragOffset / pointsPerDiopter)
-        return value + offsetDiopters
+        return base + offsetDiopters
     }
     
     var body: some View {
@@ -67,35 +69,47 @@ struct VisualRulerScaleView: View {
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { drag in
+                            if baseValue == nil {
+                                baseValue = value
+                            }
+                            
                             // 1. Update the visual offset
                             dragOffset = drag.translation.width
                             
                             // 2. Play a light "tick" as the user drags over notches
-                            let offsetDiopters = Double(-dragOffset / pointsPerDiopter)
-                            let rawValue = value + offsetDiopters
+                            let rawValue = currentVisualValue
                             let snapped = round(rawValue * 4) / 4
                             
                             if snapped != lastHapticValue {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 lastHapticValue = snapped
                             }
+                            
+                            // 3. LIVE UPDATE
+                            let clamped = min(max(snapped, range.lowerBound), range.upperBound)
+                            if value != clamped {
+                                value = clamped
+                            }
                         }
                         .onEnded { drag in
-                            // 3. THE MAGIC: Calculate velocity and add momentum
-                            // We use predictedEndTranslation to see where they "flicked" it
+                            // Calculate velocity and add momentum
                             let predictedOffset = Double(-drag.predictedEndTranslation.width / pointsPerDiopter)
-                            let predictedRawValue = value + predictedOffset
-                            
-                            // 4. Snap the predicted landing spot to the nearest 0.25 notch
+                            let base = baseValue ?? value
+                            let predictedRawValue = base + predictedOffset
                             let snapped = round(predictedRawValue * 4) / 4
                             let clamped = min(max(snapped, range.lowerBound), range.upperBound)
                             
-                            // 5. Fire a slightly heavier haptic to signify it "locked" in
+                            let targetOffset = CGFloat(-(clamped - base) * pointsPerDiopter)
+                            
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             
-                            // 6. Smoothly animate the wheel spinning to its final resting place
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                dragOffset = targetOffset
                                 value = clamped
+                            }
+                            
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                                baseValue = nil
                                 dragOffset = 0
                             }
                         }

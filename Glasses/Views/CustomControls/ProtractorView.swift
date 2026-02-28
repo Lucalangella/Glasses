@@ -40,7 +40,7 @@ struct ProtractorView: View {
 
                 ForEach(0...18, id: \.self) { i in
                     let theta = Double(i * 10)
-                    if Int(theta) % 30 == 0 || theta == 0 || theta == 180 || theta == 100 || theta == 80 {
+                    if Int(theta) % 20 == 0 {
                         let valueToShow = isOS ? Int(theta) : 180 - Int(theta)
                         labelView(valueToShow: valueToShow, theta: theta, radius: radius, center: center)
                     }

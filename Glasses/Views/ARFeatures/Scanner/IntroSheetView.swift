@@ -21,10 +21,9 @@ struct IntroSheetView: View {
                 .foregroundColor(.black)
             
             VStack(alignment: .leading, spacing: 12) {
-                Text("1. Remove your glasses before your start")
-                Text("2. Hold the phone an arms length away")
+                Text("1. Hold the device at arms length")
+                Text("2. Follow the indicator on screen")
                 Text("3. Face the camera straight on")
-                Text("4. Follow the indicator on screen")
             }
             .font(.subheadline)
             .foregroundColor(.black.opacity(0.8))
