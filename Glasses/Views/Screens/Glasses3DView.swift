@@ -205,8 +205,6 @@ struct ARFaceTrackingView: UIViewRepresentable {
             let rightEyePos = simd_make_float3(faceAnchor.rightEyeTransform.columns.3)
             let currentEyeDistance = simd_distance(leftEyePos, rightEyePos)
             
-            // Auto-scale relative to the standard 63mm IPD
-            let autoScaleFactor = currentEyeDistance / 0.063
             
             // Occlusion Logic (Invisible head mask)
             if occlusionEntity == nil {

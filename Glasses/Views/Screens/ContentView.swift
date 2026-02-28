@@ -4,8 +4,6 @@ import ARKit
 
 struct ContentView: View {
     @StateObject private var viewModel = OptometryViewModel()
-    
-    // Just ONE state variable needed now!
     @State private var isShowingScanner = false
 
     var body: some View {
@@ -13,24 +11,21 @@ struct ContentView: View {
             ScrollView {
                 VStack(spacing: 32) {
                     
-                    FramesGridView(
-                        recommendedFrames: viewModel.recommendedFrames,
-                        recommendationReasons: viewModel.recommendationReasons
-                    )
-                    .padding(.top, 16)
+                    // MARK: - Welcome Header
+                    VStack(spacing: 8) {
+                        Text("Your Prescription, Decoded.")
+                            .font(.title2.weight(.bold))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        Text("Enter your numbers below — Clarity will recommend the best frames and lenses for your eyes.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
                     
-                    // Lens Materials & Visualization - immediately after frames
-                    LensVisualizationView(prescription: $viewModel.prescription)
-                        .padding(.top, 8)
-                    
-                    TaboMeasurementView(
-                        odAxis: $viewModel.prescription.od.axis,
-                        osAxis: $viewModel.prescription.os.axis,
-                        pdValue: $viewModel.prescription.pd,
-                        isShowingScanner: $isShowingScanner
-                    )
-
-                    
+                    // MARK: - Prescription Input
                     PrescriptionTableView(
                         odSphere: $viewModel.prescription.od.sphere,
                         odCyl: $viewModel.prescription.od.cylinder,
@@ -42,13 +37,37 @@ struct ContentView: View {
                             viewModel.toggleSign(eye: eye, field: field)
                         }
                     )
+                    
+                    // MARK: - Axis & PD
+                    TaboMeasurementView(
+                        odAxis: $viewModel.prescription.od.axis,
+                        osAxis: $viewModel.prescription.os.axis,
+                        pdValue: $viewModel.prescription.pd,
+                        isShowingScanner: $isShowingScanner
+                    )
+                    
+                    // MARK: - Lens Thickness Visualization
+                    LensVisualizationView(prescription: $viewModel.prescription)
+                    
+                    
+                    // MARK: - Frame Recommendations
+                    FramesGridView(
+                        recommendedFrames: viewModel.recommendedFrames,
+                        recommendationReasons: viewModel.recommendationReasons
+                    )
                 }
                 .padding(.vertical)
             }
             .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Clarity")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    NavigationLink(destination: AboutView()) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.accentColor)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink(destination: PrescriptionGuideView()) {
                         Image(systemName: "questionmark.circle")
@@ -62,7 +81,6 @@ struct ContentView: View {
             .onTapGesture {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
-            // THE FULL SCREEN AR SCANNER
             .fullScreenCover(isPresented: $isShowingScanner) {
                 FaceScannerView(
                     isPresented: $isShowingScanner,
