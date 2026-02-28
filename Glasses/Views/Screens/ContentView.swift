@@ -17,36 +17,49 @@ struct ContentView: View {
     @State private var walkthroughStep = 0
     @State private var walkthroughStepCompleted = false
     
-    // Snapshot of initial values so we can detect when the user actually changes something
-    @State private var initialSphere: String = ""
-    @State private var initialAxis: String = ""
-    @State private var initialLensIndex: Bool = false // toggled by LensVisualizationView interaction
-    
-    // MARK: - Walkthrough Steps
+    // MARK: - Walkthrough Steps (6 refined steps)
     
     private let walkthroughSteps: [WalkthroughStep] = [
         WalkthroughStep(
             id: "prescription",
-            title: "Your Prescription",
-            body: "Tap SPH to open the ruler, then drag it to set a value. Minus (−) means nearsighted, plus (+) means farsighted. CYL corrects astigmatism and AXIS sets its angle.",
+            title: "Sphere (SPH)",
+            body: "Tap SPH to open the ruler, then drag to set a value. Minus (−) means nearsighted, plus (+) means farsighted. This is the main power of your lens.",
             icon: "doc.text.fill",
             accentColor: .blue,
             task: "Try it: tap SPH and drag the ruler to set a value",
             requiresCompletion: true
         ),
         WalkthroughStep(
-            id: "tabo",
-            title: "Axis & PD",
-            body: "Drag the protractor needle to set your cylinder axis visually. PD is the distance between your pupils — tap the face icon to measure it with AR.",
+            id: "prescription",
+            title: "Cylinder (CYL)",
+            body: "CYL corrects astigmatism — an irregular curve in your cornea. If your prescription card shows 0.00 for CYL, you don't have astigmatism. Otherwise, tap CYL and set your value.",
+            icon: "eye.fill",
+            accentColor: .indigo,
+            task: "Try it: tap CYL and drag the ruler to set a value",
+            requiresCompletion: true
+        ),
+        WalkthroughStep(
+            id: "prescription",
+            title: "Cylinder Axis",
+            body: "The axis (0°–180°) tells the lab exactly where to orient your cylinder correction. Tap AXIS to open the ruler and drag to match the number on your prescription card.",
             icon: "dial.low.fill",
             accentColor: .purple,
-            task: "Try it: drag a protractor needle to change the axis",
+            task: "Try it: tap AXIS and drag the ruler to set a value",
+            requiresCompletion: true
+        ),
+        WalkthroughStep(
+            id: "tabo",
+            title: "Pupillary Distance",
+            body: "PD is the distance between the centers of your pupils, in millimeters. It ensures your lenses are perfectly aligned. Type it in manually or tap the face icon to measure with AR.",
+            icon: "faceid",
+            accentColor: .pink,
+            task: "Try it: enter a PD value or measure with AR",
             requiresCompletion: true
         ),
         WalkthroughStep(
             id: "lens",
             title: "Lens Thickness",
-            body: "This shows how your prescription affects lens thickness. A higher index (1.67, 1.74) makes lenses thinner. Try switching between the segments to compare.",
+            body: "This shows how your prescription affects lens thickness. A higher index (1.67, 1.74) makes lenses thinner and lighter. Try switching between the segments to compare.",
             icon: "cube.transparent.fill",
             accentColor: .cyan,
             task: "Try it: tap a different lens index to see the change",
@@ -123,7 +136,7 @@ struct ContentView: View {
                     }
                     .padding(.vertical)
                     // Extra bottom padding so the last section can scroll above the card
-                    .padding(.bottom, isWalkthroughActive ? 260 : 0)
+                    .padding(.bottom, isWalkthroughActive ? 300 : 0)
                 }
                 .scrollDisabled(isWalkthroughActive)
                 .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
@@ -138,7 +151,7 @@ struct ContentView: View {
                                 isWalkthroughActive = true
                             }
                             withAnimation {
-                                scrollProxy.scrollTo("prescription", anchor: .center)
+                                scrollProxy.scrollTo("prescription", anchor: UnitPoint(x: 0.5, y: 0.35))
                             }
                         }) {
                             Image(systemName: "questionmark.circle")
@@ -181,7 +194,7 @@ struct ContentView: View {
                 
                 // MARK: - Step Completion Detection
                 
-                // Step 0: Prescription — detect sphere change
+                // Step 0: Sphere — detect sphere change
                 .onChange(of: viewModel.prescription.od.sphere) { _, newValue in
                     if isWalkthroughActive && walkthroughStep == 0 {
                         let val = Double(newValue.replacingOccurrences(of: "+", with: "")) ?? 0
@@ -198,8 +211,18 @@ struct ContentView: View {
                         }
                     }
                 }
+                
+                // Step 1: Cylinder — detect cylinder change
                 .onChange(of: viewModel.prescription.od.cylinder) { _, newValue in
-                    if isWalkthroughActive && walkthroughStep == 0 {
+                    if isWalkthroughActive && walkthroughStep == 1 {
+                        let val = Double(newValue.replacingOccurrences(of: "+", with: "")) ?? 0
+                        if abs(val) >= 0.25 {
+                            withAnimation { walkthroughStepCompleted = true }
+                        }
+                    }
+                }
+                .onChange(of: viewModel.prescription.os.cylinder) { _, newValue in
+                    if isWalkthroughActive && walkthroughStep == 1 {
                         let val = Double(newValue.replacingOccurrences(of: "+", with: "")) ?? 0
                         if abs(val) >= 0.25 {
                             withAnimation { walkthroughStepCompleted = true }
@@ -207,24 +230,35 @@ struct ContentView: View {
                     }
                 }
                 
-                // Step 1: Tabo — detect axis change
+                // Step 2: Axis — detect axis change via ruler
                 .onChange(of: viewModel.prescription.od.axis) { old, new in
-                    if isWalkthroughActive && walkthroughStep == 1 && old != new {
+                    if isWalkthroughActive && walkthroughStep == 2 && old != new {
                         withAnimation { walkthroughStepCompleted = true }
                     }
                 }
                 .onChange(of: viewModel.prescription.os.axis) { old, new in
-                    if isWalkthroughActive && walkthroughStep == 1 && old != new {
+                    if isWalkthroughActive && walkthroughStep == 2 && old != new {
                         withAnimation { walkthroughStepCompleted = true }
                     }
                 }
                 
-                // Step 2: Lens — we use a notification since the picker is inside LensVisualizationView
+                // Step 3: PD — detect PD typed or set via AR scanner
+                .onChange(of: viewModel.prescription.pd) { _, newValue in
+                    if isWalkthroughActive && walkthroughStep == 3 {
+                        if let pdVal = Double(newValue), pdVal > 0 {
+                            withAnimation { walkthroughStepCompleted = true }
+                        }
+                    }
+                }
+                
+                // Step 4: Lens — notification from LensVisualizationView
                 .onReceive(NotificationCenter.default.publisher(for: .lensIndexChanged)) { _ in
-                    if isWalkthroughActive && walkthroughStep == 2 {
+                    if isWalkthroughActive && walkthroughStep == 4 {
                         withAnimation { walkthroughStepCompleted = true }
                     }
                 }
+                
+                // Step 5: Frames — no completion required
                 
                 // Auto-start on first launch
                 .onAppear {
@@ -233,9 +267,8 @@ struct ContentView: View {
                             withAnimation {
                                 isWalkthroughActive = true
                             }
-                            // Scroll first step into view
                             withAnimation(.easeInOut(duration: 0.4)) {
-                                scrollProxy.scrollTo("prescription", anchor: .center)
+                                scrollProxy.scrollTo("prescription", anchor: UnitPoint(x: 0.5, y: 0.35))
                             }
                         }
                     }
@@ -251,8 +284,6 @@ struct ContentView: View {
 }
 
 // MARK: - Notification for Lens Index Change
-// This lets the LensVisualizationView signal that the user tapped a segment,
-// without needing to refactor the entire view's state.
 
 extension Notification.Name {
     static let lensIndexChanged = Notification.Name("lensIndexChanged")

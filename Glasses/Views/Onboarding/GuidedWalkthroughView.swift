@@ -1,5 +1,3 @@
-
-
 import SwiftUI
 
 // MARK: - Walkthrough Step Definition
@@ -153,15 +151,25 @@ struct WalkthroughOverlay: View {
                 
                 // Navigation
                 HStack {
-        
+                    // Skip Tour
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isActive = false
+                        }
+                    }) {
+                        Text("Skip Tour")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
                     Spacer()
                     
                     // Dots
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         ForEach(0..<steps.count, id: \.self) { i in
                             Circle()
                                 .fill(i <= currentStepIndex ? step.accentColor : Color.secondary.opacity(0.25))
-                                .frame(width: 7, height: 7)
+                                .frame(width: 6, height: 6)
                         }
                     }
                     
@@ -200,14 +208,18 @@ struct WalkthroughOverlay: View {
         guard !(currentStep?.requiresCompletion ?? false) || stepCompleted else { return }
         
         if currentStepIndex < steps.count - 1 {
+            let nextIndex = currentStepIndex + 1
+            
             withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                currentStepIndex += 1
+                currentStepIndex = nextIndex
                 stepCompleted = false
             }
-            if let nextStep = steps[safe: currentStepIndex] {
+            
+            // Scroll the next step's anchor into view
+            if let nextStep = steps[safe: nextIndex] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    withAnimation(.easeInOut(duration: 0.4)) {
-                        scrollProxy?.scrollTo(nextStep.id, anchor: .center)
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        scrollProxy?.scrollTo(nextStep.id, anchor: UnitPoint(x: 0.5, y: 0.35))
                     }
                 }
             }
