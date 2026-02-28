@@ -64,9 +64,9 @@ struct ARFaceTrackingContainer: View {
     @Binding var isPresented: Bool
     
     // Live Fine-Tuning States (Adjust these while wearing to find your model's "Sweet Spot")
-    @State private var modelScale: Float = 0.7
-    @State private var offsetY: Float = 0.01
-    @State private var offsetZ: Float = 0.02
+    @State private var modelScale: Float = 1.0
+    @State private var offsetY: Float = 0.0
+    @State private var offsetZ: Float = 0.0
     
     var body: some View {
         ZStack {
