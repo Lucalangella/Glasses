@@ -151,7 +151,7 @@ struct ContentView: View {
                                 isWalkthroughActive = true
                             }
                             withAnimation {
-                                scrollProxy.scrollTo("prescription", anchor: UnitPoint(x: 0.5, y: 0.35))
+                                scrollProxy.scrollTo("prescription", anchor: .center)
                             }
                         }) {
                             Image(systemName: "questionmark.circle")
@@ -190,6 +190,7 @@ struct ContentView: View {
                             )
                         }
                     }
+                    .ignoresSafeArea()
                 }
                 
                 // MARK: - Step Completion Detection
@@ -268,7 +269,7 @@ struct ContentView: View {
                                 isWalkthroughActive = true
                             }
                             withAnimation(.easeInOut(duration: 0.4)) {
-                                scrollProxy.scrollTo("prescription", anchor: UnitPoint(x: 0.5, y: 0.35))
+                                scrollProxy.scrollTo("prescription", anchor: .center)
                             }
                         }
                     }

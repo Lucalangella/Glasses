@@ -219,7 +219,7 @@ struct WalkthroughOverlay: View {
             if let nextStep = steps[safe: nextIndex] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     withAnimation(.easeInOut(duration: 0.5)) {
-                        scrollProxy?.scrollTo(nextStep.id, anchor: UnitPoint(x: 0.5, y: 0.35))
+                        scrollProxy?.scrollTo(nextStep.id, anchor: .center)
                     }
                 }
             }
