@@ -153,14 +153,7 @@ struct WalkthroughOverlay: View {
                 
                 // Navigation
                 HStack {
-                    Button("Skip Tour") {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            isActive = false
-                        }
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    
+        
                     Spacer()
                     
                     // Dots
