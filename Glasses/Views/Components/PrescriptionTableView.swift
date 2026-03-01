@@ -18,7 +18,7 @@ struct PrescriptionTableView: View {
     // 1. ADDED A NAMESPACE FOR THE SLIDING ANIMATION
     @Namespace private var segmentAnimation
     
-    var onToggleSign: (OptometryViewModel.EyeType, OptometryViewModel.FieldType) -> Void
+    var onToggleSign: (EyeType, FieldType) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 32) {

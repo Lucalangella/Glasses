@@ -1,5 +1,10 @@
 import Foundation
 
+// MARK: - Prescription Enums
+
+enum EyeType  { case od, os }
+enum FieldType { case sphere, cylinder }
+
 // MARK: - Eye Data
 
 struct EyeData {

@@ -4,6 +4,7 @@ import SwiftUI
 
 struct LensVisualizationView: View {
     @Binding var prescription: Prescription
+    var onLensIndexChanged: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,16 +20,18 @@ struct LensVisualizationView: View {
                     eyeLabel: "OD",
                     eyeSubtitle: "Right Eye",
                     sphere: prescription.od.sphere,
-                    cylinder: prescription.od.cylinder
+                    cylinder: prescription.od.cylinder,
+                    onLensIndexChanged: onLensIndexChanged
                 )
-                .id("lens_od")              
+                .id("lens_od")
                                 .walkthroughAnchor("lens_od")
 
                 EyeLensCard(
                     eyeLabel: "OS",
                     eyeSubtitle: "Left Eye",
                     sphere: prescription.os.sphere,
-                    cylinder: prescription.os.cylinder
+                    cylinder: prescription.os.cylinder,
+                    onLensIndexChanged: onLensIndexChanged
                 )
             }
             .padding(.horizontal, 20)
@@ -44,6 +47,7 @@ struct EyeLensCard: View {
     let eyeSubtitle: String
     let sphere: String
     let cylinder: String
+    var onLensIndexChanged: (() -> Void)? = nil
 
     @State private var selectedIndex: EyeLensIndex = .poly
 
@@ -91,7 +95,7 @@ struct EyeLensCard: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 14)
             .onChange(of: selectedIndex) { _, _ in
-                            NotificationCenter.default.post(name: .lensIndexChanged, object: nil)
+                            onLensIndexChanged?()
                         }
 
             // Lens cross-section
@@ -106,24 +110,6 @@ struct EyeLensCard: View {
         .background(Color(UIColor.secondarySystemGroupedBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.07), radius: 8, x: 0, y: 4)
-    }
-}
-
-// MARK: - Lens Index Options
-
-enum EyeLensIndex: String, CaseIterable {
-    case poly = "1.59"
-    case mid  = "1.67"
-    case high = "1.74"
-
-    var label: String { rawValue }
-
-    var refractiveIndex: Double {
-        switch self {
-        case .poly: return 1.59
-        case .mid:  return 1.67
-        case .high: return 1.74
-        }
     }
 }
 

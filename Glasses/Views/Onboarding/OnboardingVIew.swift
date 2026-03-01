@@ -146,14 +146,6 @@ struct OnboardingPageView: View {
     }
 }
 
-// MARK: - Model
-
-struct OnboardingPage {
-    let imageName: String
-    let title: String
-    let body: String
-}
-
 // MARK: - Preview
 
 #Preview {
