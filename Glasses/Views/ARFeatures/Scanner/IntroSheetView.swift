@@ -14,7 +14,7 @@ struct IntroSheetView: View {
         VStack(spacing: 24) {
             Text("Advisor")
                 .font(.subheadline.weight(.semibold))
-                
+                .foregroundColor(.black)
             
             Text("For best results")
                 .font(.title2.weight(.bold))
@@ -48,3 +48,15 @@ struct IntroSheetView: View {
     }
 }
 
+#Preview {
+    ZStack(alignment: .bottom) {
+        // Sfondo per visualizzare correttamente gli angoli arrotondati del foglio bianco
+        Color.gray.opacity(0.2).ignoresSafeArea()
+        
+        IntroSheetView(
+            onStart: {
+                print("Got it")
+            }
+        )
+    }
+}

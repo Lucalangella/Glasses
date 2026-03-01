@@ -23,7 +23,7 @@ struct Glasses3DView: View {
                      scene: scene,
                      options: [.autoenablesDefaultLighting, .allowsCameraControl]
                  )
-                 .frame(height: 00)
+                 .frame(height: 800)
                  .background(Color(UIColor.secondarySystemGroupedBackground))
                  .cornerRadius(16)
                  .padding()

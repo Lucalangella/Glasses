@@ -66,7 +66,8 @@ struct TaboMeasurementView: View {
                     }
                 }
                 .padding(.top, 20) // Push it down slightly to align with the arc of the protractors
-                
+                .id("pd_step") // For programmatic scrolling
+                                .walkthroughAnchor("pd_step")
                 // OS Protractor
                 VStack {
                     ProtractorView(axisText: $osAxis, isOS: true)

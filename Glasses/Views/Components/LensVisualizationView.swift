@@ -21,6 +21,8 @@ struct LensVisualizationView: View {
                     sphere: prescription.od.sphere,
                     cylinder: prescription.od.cylinder
                 )
+                .id("lens_od")              
+                                .walkthroughAnchor("lens_od")
 
                 EyeLensCard(
                     eyeLabel: "OS",
@@ -88,6 +90,9 @@ struct EyeLensCard: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.bottom, 14)
+            .onChange(of: selectedIndex) { _, _ in
+                            NotificationCenter.default.post(name: .lensIndexChanged, object: nil)
+                        }
 
             // Lens cross-section
             LensCrossSectionView(

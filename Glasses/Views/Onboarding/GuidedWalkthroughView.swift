@@ -23,10 +23,15 @@ struct WalkthroughAnchorKey: PreferenceKey {
 }
 
 // MARK: - View Extension
-
 extension View {
-    func walkthroughAnchor(_ id: String) -> some View {
-        self.anchorPreference(key: WalkthroughAnchorKey.self, value: .bounds) { [id: $0] }
+    func walkthroughAnchor(_ id: String?) -> some View {
+        self.anchorPreference(key: WalkthroughAnchorKey.self, value: .bounds) { anchor in
+            if let id = id {
+                return [id: anchor]
+            } else {
+                return [:]
+            }
+        }
     }
 }
 
@@ -46,20 +51,41 @@ struct WalkthroughOverlay: View {
         return steps[currentStepIndex]
     }
     
-    private var currentRect: CGRect? {
-        guard let step = currentStep, let anchor = anchors[step.id] else { return nil }
-        return proxy[anchor]
-    }
-    
     private var cutoutRect: CGRect? {
-        guard let rect = currentRect else { return nil }
-        return rect.insetBy(dx: 8, dy: -10)
+        guard let step = currentStep else { return nil }
+        
+        var rect: CGRect? = nil
+        
+        // 1. Try to combine button and ruler anchors if they exist
+        if let buttonAnchor = anchors["\(step.id)_button"] {
+            rect = proxy[buttonAnchor]
+        }
+        
+        if let rulerAnchor = anchors["\(step.id)_ruler"] {
+            let rRect = proxy[rulerAnchor]
+            rect = rect?.union(rRect) ?? rRect
+        }
+        
+        // 2. Fallback to standard generic anchor
+        if rect == nil, let mainAnchor = anchors[step.id] {
+            rect = proxy[mainAnchor]
+        }
+        
+        // Expand the bounds slightly to comfortably fit the focused UI elements
+        // 3. Apply custom sizing based on the step ID
+                if step.id == "frames" {
+                    // Positive numbers shrink the cutout inward.
+                    return rect?.insetBy(dx: 4, dy: -8)
+                } else {
+                    // The standard outward padding for all other steps
+                    return rect?.insetBy(dx: -8, dy: -8)
+                }
     }
     
     var body: some View {
         if let step = currentStep {
             ZStack(alignment: .bottom) {
-                
+                // ... Keep existing ZStack contents identical ...
                 // 1 — Dim layer with interactive cutout
                 InteractiveDimOverlay(cutoutRect: cutoutRect)
                     .ignoresSafeArea()
@@ -152,84 +178,124 @@ struct WalkthroughOverlay: View {
                             )
                     )
                 }
-                
+ 
                 // Navigation
-                HStack {
+                                ZStack {
+                                    let isLast = currentStepIndex == steps.count - 1
+                                    let canAdvance = !step.requiresCompletion || stepCompleted
+                                    
+                                    // 1. Perfectly centered dots
+                                    HStack(spacing: 5) {
+                                        ForEach(0..<steps.count, id: \.self) { i in
+                                            Circle()
+                                                .fill(
+                                                    i <= currentStepIndex ? Color.blue : Color.secondary
+                                                        .opacity(0.25)
+                                                )
+                                                .frame(width: 6, height: 6)
+                                        }
+                                    }
+                                    
+                                    // 2. Buttons pushed to the edges
+                                    HStack {
+                                        // Skip Button
+                                        if !isLast {
+                                            Button(action: skipStep) {
+                                                Text("Skip")
+                                                    .font(.subheadline.weight(.semibold))
+                                                    .foregroundColor(.secondary)
+                                                    .padding(.vertical, 10)
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        // Next / Get Started Button
+                                        Button(action: advance) {
+                                            Text(isLast ? "Get Started" : "Next")
+                                                .font(.subheadline.weight(.bold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 24)
+                                                .padding(.vertical, 10)
+                                                .background(
+                                                    canAdvance ? Color.blue : Color.gray
+                                                        .opacity(0.35)
+                                                )
+                                                .cornerRadius(20)
+                                        }
+                                        .disabled(!canAdvance)
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 34)
+                        }
+                        .background(
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(.regularMaterial)
+                                .shadow(color: .black.opacity(0.12), radius: 20, x: 0, y: -5)
+                        )
+                        .padding(.horizontal, 8)
+                    }
                     
-                    Spacer()
+                    // MARK: - Actions
                     
-                    // Dots
-                    HStack(spacing: 5) {
-                        ForEach(0..<steps.count, id: \.self) { i in
-                            Circle()
-                                .fill(
-                                    i <= currentStepIndex ? Color.blue : Color.secondary
-                                        .opacity(0.25)
-                                )
-                                .frame(width: 6, height: 6)
+                    private func advance() {
+                        guard !(currentStep?.requiresCompletion ?? false) || stepCompleted else { return }
+                        
+                        if currentStepIndex < steps.count - 1 {
+                            let nextIndex = currentStepIndex + 1
+                            
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                                currentStepIndex = nextIndex
+                                stepCompleted = false
+                            }
+                            
+                            // Scroll the next step's anchor into view
+                            if let nextStep = steps[safe: nextIndex] {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        scrollProxy?.scrollTo(nextStep.id, anchor: .center)
+                                    }
+                                }
+                            }
+                        } else {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isActive = false
+                            }
                         }
                     }
-                    
-                    Spacer()
-                    
-                    let isLast = currentStepIndex == steps.count - 1
-                    let canAdvance = !step.requiresCompletion || stepCompleted
-                    
-                    Button(action: advance) {
-                        Text(isLast ? "Get Started" : "Next")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 10)
-                            .background(
-                                canAdvance ? Color.blue : Color.gray
-                                    .opacity(0.35)
-                            )
-                            .cornerRadius(20)
+
+                    // MOVED skipStep() inside the WalkthroughOverlay struct!
+                    private func skipStep() {
+                        // Skip bypasses the requiresCompletion check entirely
+                        if currentStepIndex < steps.count - 1 {
+                            let nextIndex = currentStepIndex + 1
+                            
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                                currentStepIndex = nextIndex
+                                stepCompleted = false
+                            }
+                            
+                            // Scroll the next step's anchor into view
+                            if let nextStep = steps[safe: nextIndex] {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        scrollProxy?.scrollTo(nextStep.id, anchor: .center)
+                                    }
+                                }
+                            }
+                        } else {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isActive = false
+                            }
+                        }
                     }
-                    .disabled(!canAdvance)
-                }
-                .padding(.top, 4)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 34)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(.regularMaterial)
-                .shadow(color: .black.opacity(0.12), radius: 20, x: 0, y: -5)
-        )
-        .padding(.horizontal, 8)
-    }
-    
-    // MARK: - Actions
-    
-    private func advance() {
-        guard !(currentStep?.requiresCompletion ?? false) || stepCompleted else { return }
-        
-        if currentStepIndex < steps.count - 1 {
-            let nextIndex = currentStepIndex + 1
-            
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                currentStepIndex = nextIndex
-                stepCompleted = false
-            }
-            
-            // Scroll the next step's anchor into view
-            if let nextStep = steps[safe: nextIndex] {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    withAnimation(.easeInOut(duration: 0.5)) {
-                        scrollProxy?.scrollTo(nextStep.id, anchor: .center)
-                    }
-                }
-            }
-        } else {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                isActive = false
-            }
-        }
-    }
-}
+                } // <-- END OF WalkthroughOverlay struct is down here now
+
+                // MARK: - Interactive Dim Overlay (UIKit)
+                // ... rest of your file remains the same ...
 
 // MARK: - Interactive Dim Overlay (UIKit)
 /// Dims the entire screen but lets touches pass through inside the cutout rect,
@@ -285,4 +351,58 @@ extension Array {
     subscript(safe index: Index) -> Element? {
         indices.contains(index) ? self[index] : nil
     }
+}
+
+#Preview("Frames Step Debugger") {
+    struct FramesWalkthroughPreview: View {
+        @State private var currentStepIndex = 0
+        @State private var isActive = true
+        @State private var stepCompleted = false
+        
+        // Mocking just the final step
+        let steps = [
+            WalkthroughStep(
+                id: "frames",
+                title: "Frame Recommendations",
+                body: "Clarity filters frames based on optical rules from your prescription and PD. Tap any frame to see it in 3D or try it on your face with AR.",
+                icon: "eyeglasses",
+                task: nil,
+                requiresCompletion: false
+            )
+        ]
+        
+        var body: some View {
+            GeometryReader { geo in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Simulating the exact layout from ContentView
+                        Color.clear.frame(height: 0).id("frames")
+                        
+                        FramesGridView(
+                            recommendedFrames: ["aviator", "round"],
+                            recommendationReasons: ["prescription reaches -6.00", "PD is narrow (55.0 mm)"]
+                        )
+                        .walkthroughAnchor("frames")
+                    }
+                    .padding(.top, 100) // Push it down a bit to simulate scrolling
+                }
+                .overlayPreferenceValue(WalkthroughAnchorKey.self) { anchors in
+                    if isActive {
+                        WalkthroughOverlay(
+                            steps: steps,
+                            anchors: anchors,
+                            proxy: geo,
+                            currentStepIndex: $currentStepIndex,
+                            isActive: $isActive,
+                            stepCompleted: $stepCompleted,
+                            scrollProxy: nil
+                        )
+                    }
+                }
+            }
+            .background(Color(UIColor.systemGroupedBackground))
+        }
+    }
+    
+    return FramesWalkthroughPreview()
 }

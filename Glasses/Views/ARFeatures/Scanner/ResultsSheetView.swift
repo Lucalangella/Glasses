@@ -16,6 +16,7 @@ struct ResultsSheetView: View {
         VStack(spacing: 24) {
             Text("Advisor")
                 .font(.subheadline.weight(.semibold))
+                .foregroundColor(.black)
                 
             Text("Your measurement")
                 .font(.title2.weight(.bold))
@@ -33,7 +34,7 @@ struct ResultsSheetView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Pupillary Distance (PD)")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                              
                             
                             Text(String(format: "%.1f mm", results.pd))
                                 .font(.title)
@@ -45,10 +46,10 @@ struct ResultsSheetView: View {
                     
                     Text("This is the distance between your pupils. While this AR scan provides a close estimate, always rely on an optometrist for your official prescription.")
                         .font(.caption)
-                        .foregroundColor(.secondary)
                         .padding(.leading, 38)
                         .padding(.top, 8)
                 }
+                .foregroundColor(.black.opacity(0.8))
                 .padding(20)
                 .background(Color.white)
                 .cornerRadius(16)
@@ -72,14 +73,32 @@ struct ResultsSheetView: View {
                 Button(action: onRescan) {
                     Text("Scan Again")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.black.opacity(0.8))
                 }
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
         }
+        .background(Color.white)
         .padding(.top, 32)
-        .background(Color(UIColor.secondarySystemGroupedBackground)) // Slightly gray background to make the white card pop
         .cornerRadius(32, corners: [.topLeft, .topRight])
+    }
+}
+
+#Preview {
+    ZStack(alignment: .bottom) {
+        // Background color to help visualize the sheet's top corners
+        Color.gray.opacity(0.2).ignoresSafeArea()
+        
+        ResultsSheetView(
+            results: FaceScanResults(pd: 62.5),
+            onContinue: {
+                print("Apply to Prescription tapped")
+            },
+            onRescan: {
+                print("Scan Again tapped")
+            }
+        )
+  
     }
 }

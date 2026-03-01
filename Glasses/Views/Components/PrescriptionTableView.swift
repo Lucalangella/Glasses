@@ -39,48 +39,56 @@ struct PrescriptionTableView: View {
     }
     
     private func eyeSection(title: String, sph: Binding<String>, cyl: Binding<String>, axis: Binding<String>, sphereId: ActiveScaleField, cylId: ActiveScaleField, axisId: ActiveScaleField) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.headline)
-            
-            // 2. UNIFIED SEGMENTED CONTROL CONTAINER
-            HStack(spacing: 0) {
-                fieldSelectorButton(title: "SPH", text: sph.wrappedValue, isActive: activeField == sphereId) {
-                    toggleActiveField(sphereId)
+            VStack(alignment: .leading, spacing: 12) {
+                Text(title)
+                    .font(.headline)
+                
+                HStack(spacing: 0) {
+                    // 1. Add Anchor to SPH
+                    fieldSelectorButton(title: "SPH", text: sph.wrappedValue, isActive: activeField == sphereId) {
+                        toggleActiveField(sphereId)
+                    }
+                    .walkthroughAnchor(sphereId == .odSphere ? "sph_button" : nil)
+                    
+                    verticalDivider()
+                    
+                    // 2. Add Anchor to CYL
+                    fieldSelectorButton(title: "CYL", text: cyl.wrappedValue, isActive: activeField == cylId) {
+                        toggleActiveField(cylId)
+                    }
+                    .walkthroughAnchor(cylId == .odCyl ? "cyl_button" : nil)
+                    
+                    verticalDivider()
+                    
+                    // 3. Add Anchor to AXIS
+                    fieldSelectorButton(title: "AXIS", text: axis.wrappedValue, isActive: activeField == axisId) {
+                        toggleActiveField(axisId)
+                    }
+                    .walkthroughAnchor(axisId == .odAxis ? "axis_button" : nil)
                 }
+                .padding(6)
+                .background(Color(UIColor.secondarySystemGroupedBackground))
+                .cornerRadius(16)
                 
-                verticalDivider()
-                
-                fieldSelectorButton(title: "CYL", text: cyl.wrappedValue, isActive: activeField == cylId) {
-                    toggleActiveField(cylId)
-                }
-                
-                verticalDivider()
-                
-                fieldSelectorButton(title: "AXIS", text: axis.wrappedValue, isActive: activeField == axisId) {
-                    toggleActiveField(axisId)
+                // The Inline Selectors (Rulers)
+                if activeField == sphereId {
+                    VisualRulerScaleView(value: doubleBinding(for: sph))
+                        .padding(.top, 4)
+                        .transition(.opacity)
+                        .walkthroughAnchor(sphereId == .odSphere ? "sph_ruler" : nil)
+                } else if activeField == cylId {
+                    VisualRulerScaleView(value: doubleBinding(for: cyl))
+                        .padding(.top, 4)
+                        .transition(.opacity)
+                        .walkthroughAnchor(cylId == .odCyl ? "cyl_ruler" : nil)
+                } else if activeField == axisId {
+                    AxisRulerScaleView(value: axisDoubleBinding(for: axis))
+                        .padding(.top, 4)
+                        .transition(.opacity)
+                        .walkthroughAnchor(axisId == .odAxis ? "axis_ruler" : nil)
                 }
             }
-            .padding(6)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
-            .cornerRadius(16)
-            
-            // The Inline Selectors (Rulers)
-                        if activeField == sphereId {
-                            VisualRulerScaleView(value: doubleBinding(for: sph))
-                                .padding(.top, 4)
-                                .transition(.opacity) // Changed to simple fade
-                        } else if activeField == cylId {
-                            VisualRulerScaleView(value: doubleBinding(for: cyl))
-                                .padding(.top, 4)
-                                .transition(.opacity) // Changed to simple fade
-                        } else if activeField == axisId {
-                            AxisRulerScaleView(value: axisDoubleBinding(for: axis))
-                                .padding(.top, 4)
-                                .transition(.opacity) // Changed to simple fade
-                        }
         }
-    }
     
     // MARK: - Components
     
