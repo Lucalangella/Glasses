@@ -55,7 +55,7 @@ struct ContentView: View {
         WalkthroughStep(
             id: "lens_od",
             title: "Lens Thickness",
-            body: "This shows how your prescription affects lens thickness. A higher index (1.67, 1.74) makes lenses thinner and lighter. Try switching between the segments to compare.",
+            body: "This shows how your prescription affects lens thickness. SE (spherical equivalent) is the sum of Sphere and Cylinder. A higher index (1.67, 1.74) makes lenses thinner and lighter. Try switching between the segments to compare.",
             icon: "cube.transparent.fill",
             task: "Try it: tap a different lens index to see the change",
             requiresCompletion: true
@@ -133,8 +133,11 @@ struct ContentView: View {
                             
                             FramesGridView(
                                 recommendedFrames: viewModel.recommendedFrames,
-                                recommendationReasons: viewModel.recommendationReasons
+                                recommendationReasons: viewModel.recommendationReasons,
+                                recommendationTitles: viewModel.recommendationTitles,
+                                recommendationSummary: viewModel.recommendationSummary
                             )
+                            .id("frames")
                             .walkthroughAnchor("frames")
                         }
                         .padding(.vertical)

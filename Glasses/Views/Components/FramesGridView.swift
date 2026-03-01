@@ -2,66 +2,69 @@ import SwiftUI
 
 struct FramesGridView: View {
     var recommendedFrames: Set<String>
-    var recommendationReasons: [String]
-    
+    var recommendationReasons: [String]       // kept for legacy compatibility
+    var recommendationTitles: [String] = []   // NEW: short chip labels
+    var recommendationSummary: String = ""   // NEW: pre-built blurb
+
     private let allFrames = [
         "aviator", "browline", "cateye",
         "geometric", "oval", "oversized",
         "rectangle", "round", "square"
     ]
-    
-    // Always show all frames — never remove items so the grid height stays constant.
+
     private var columns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            
+
             // MARK: - Header
             HStack {
                 Text("Frames")
                     .font(.headline)
-                
+
                 Spacer()
-                
-                if !recommendedFrames.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "sparkles")
-                        Text("Filtered by Rx")
+
+                if !recommendationTitles.isEmpty {
+                    // Show individual rule chips when there are 1–2 rules,
+                    // otherwise fall back to a single generic chip.
+                    if recommendationTitles.count <= 2 {
+                        HStack(spacing: 4) {
+                            ForEach(recommendationTitles, id: \.self) { title in
+                                ruleChip(title)
+                            }
+                        }
+                    } else {
+                        ruleChip("\(recommendationTitles.count) Rules")
                     }
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(.accentColor)
                 }
             }
             .padding(.horizontal)
-            
 
             // MARK: - Grid
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(allFrames, id: \.self) { frameName in
-                    let isRecommended = !recommendedFrames.isEmpty && recommendedFrames.contains(frameName)
-                    let isDimmed = !recommendedFrames.isEmpty && !recommendedFrames.contains(frameName)
-                    
+                    let isRecommended = recommendedFrames.contains(frameName)
+                    let isDimmed = !recommendationTitles.isEmpty && !recommendedFrames.contains(frameName)
+
                     NavigationLink(value: frameName) {
                         VStack(spacing: 8) {
                             ZStack(alignment: .topTrailing) {
                                 Image(frameName)
                                     .resizable()
                                     .scaledToFit()
-                                    // Flex height so they look good when taking up 50% or 100% of the screen width
                                     .frame(minHeight: 40, maxHeight: 60)
                                     .padding()
                                     .frame(maxWidth: .infinity)
                                     .background(Color(UIColor.secondarySystemGroupedBackground))
                                     .cornerRadius(12)
-                                    // 1. ADDED SHADOW FOR DEPTH
                                     .shadow(color: Color.black.opacity(0.08), radius: 5, x: 0, y: 3)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
                                             .stroke(isRecommended ? Color.accentColor.opacity(0.5) : Color.clear, lineWidth: 2)
                                     )
-                                
+
                                 if isRecommended {
                                     Image(systemName: "checkmark.circle.fill")
                                         .font(.caption)
@@ -70,18 +73,16 @@ struct FramesGridView: View {
                                         .background(Color.accentColor)
                                         .clipShape(Circle())
                                         .offset(x: 6, y: -6)
-                                        // Optional: Add a tiny shadow to the badge too
                                         .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
                                 }
                             }
-                            
+
                             Text(frameName.capitalized.replacingOccurrences(of: "_", with: " "))
                                 .font(.caption2)
                                 .fontWeight(isRecommended ? .bold : .medium)
                                 .foregroundColor(.primary)
                         }
                     }
-                    // 2. REPLACED .plain WITH CUSTOM BUTTON STYLE
                     .buttonStyle(CardButtonStyle())
                     .opacity(isDimmed ? 0.35 : 1.0)
                     .animation(.easeInOut(duration: 0.25), value: isDimmed)
@@ -89,43 +90,61 @@ struct FramesGridView: View {
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
-            
-            let joinedReasons = recommendationReasons.joined(separator: " and your ")
+
+            // MARK: - Info Blurb (always visible)
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundColor(.accentColor)
-                    Text("Optical Recommendation")
+                    Image(systemName: recommendationTitles.isEmpty ? "checkmark.seal.fill" : "info.circle.fill")
+                        .foregroundColor(recommendationTitles.isEmpty ? .green : .accentColor)
+                    Text(recommendationTitles.isEmpty ? "All Frames Suitable" : "Optical Recommendation")
                         .font(.subheadline.bold())
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(recommendationTitles.isEmpty ? .green : .accentColor)
                 }
 
-                Text("Based on your \(joinedReasons), these frames are curated to optimize your visual clarity. Smaller, rounded shapes help center your pupils and significantly reduce lens edge thickness and peripheral distortion.")
+                Text(recommendationSummary ?? legacySummary ?? "")
                     .font(.caption)
                     .lineSpacing(4)
                     .foregroundColor(.secondary)
             }
             .padding()
-            .background(Color.accentColor.opacity(0.05))
+            .background((recommendationTitles.isEmpty ? Color.green : Color.accentColor).opacity(0.05))
             .cornerRadius(12)
             .padding(.horizontal)
-            .opacity(recommendationReasons.isEmpty ? 0 : 1)
-            .animation(.easeInOut(duration: 0.2), value: recommendationReasons.isEmpty)
-            
+            .animation(.easeInOut(duration: 0.2), value: recommendationTitles.isEmpty)
         }
+    }
+
+    // MARK: - Helpers
+
+    /// Falls back to the legacy joined-reasons string when the new summary isn't passed in.
+    private var legacySummary: String? {
+        guard !recommendationReasons.isEmpty else { return nil }
+        let joined = recommendationReasons.joined(separator: " and your ")
+        return "Based on your \(joined), these frames are curated to optimise your visual clarity. Smaller, rounded shapes help centre your pupils and significantly reduce lens edge thickness and peripheral distortion."
+    }
+
+    @ViewBuilder
+    private func ruleChip(_ label: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "sparkles")
+            Text(label)
+        }
+        .font(.caption.weight(.bold))
+        .foregroundColor(.accentColor)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.accentColor.opacity(0.1))
+        .cornerRadius(8)
     }
 }
 
 // MARK: - Custom Button Style
-// This creates the tactile "squish" effect when the user presses the frame
+
 struct CardButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            // Scale down slightly when pressed
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            // Dim slightly when pressed
             .opacity(configuration.isPressed ? 0.9 : 1.0)
-            // Smooth bouncy animation for the interaction
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
